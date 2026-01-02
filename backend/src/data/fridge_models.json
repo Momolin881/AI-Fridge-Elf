@@ -1,0 +1,170 @@
+{
+  "brands": [
+    {
+      "name": "Panasonic 國際牌",
+      "models": [
+        {
+          "model": "NR-D500HV",
+          "capacity_liters": 500,
+          "type": "雙門冰箱",
+          "compartments": {
+            "冷藏": 350,
+            "冷凍": 150
+          }
+        },
+        {
+          "model": "NR-F607VT",
+          "capacity_liters": 600,
+          "type": "四門冰箱",
+          "compartments": {
+            "冷藏": 400,
+            "冷凍": 200
+          }
+        }
+      ]
+    },
+    {
+      "name": "HITACHI 日立",
+      "models": [
+        {
+          "model": "RG520HJ",
+          "capacity_liters": 520,
+          "type": "五門冰箱",
+          "compartments": {
+            "冷藏": 320,
+            "冷凍": 200
+          }
+        },
+        {
+          "model": "RG616",
+          "capacity_liters": 616,
+          "type": "六門冰箱",
+          "compartments": {
+            "冷藏": 400,
+            "冷凍": 216
+          }
+        }
+      ]
+    },
+    {
+      "name": "TOSHIBA 東芝",
+      "models": [
+        {
+          "model": "GR-RT537WE",
+          "capacity_liters": 537,
+          "type": "雙門變頻冰箱",
+          "compartments": {
+            "冷藏": 370,
+            "冷凍": 167
+          }
+        },
+        {
+          "model": "GR-RF610WE",
+          "capacity_liters": 608,
+          "type": "六門變頻冰箱",
+          "compartments": {
+            "冷藏": 395,
+            "冷凍": 213
+          }
+        }
+      ]
+    },
+    {
+      "name": "SHARP 夏普",
+      "models": [
+        {
+          "model": "SJ-XF56BT",
+          "capacity_liters": 560,
+          "type": "五門冰箱",
+          "compartments": {
+            "冷藏": 350,
+            "冷凍": 210
+          }
+        }
+      ]
+    },
+    {
+      "name": "LG",
+      "models": [
+        {
+          "model": "GR-DBF85S",
+          "capacity_liters": 850,
+          "type": "對開門冰箱",
+          "compartments": {
+            "冷藏": 550,
+            "冷凍": 300
+          }
+        },
+        {
+          "model": "GR-QL66MB",
+          "capacity_liters": 630,
+          "type": "四門冰箱",
+          "compartments": {
+            "冷藏": 410,
+            "冷凍": 220
+          }
+        }
+      ]
+    },
+    {
+      "name": "SAMPO 聲寶",
+      "models": [
+        {
+          "model": "SR-N58DV",
+          "capacity_liters": 580,
+          "type": "變頻雙門冰箱",
+          "compartments": {
+            "冷藏": 400,
+            "冷凍": 180
+          }
+        }
+      ]
+    }
+  ],
+  "default_compartments": {
+    "simple": [
+      {
+        "name": "冷藏",
+        "parent_type": "冷藏",
+        "capacity_ratio": 0.65
+      },
+      {
+        "name": "冷凍",
+        "parent_type": "冷凍",
+        "capacity_ratio": 0.35
+      }
+    ],
+    "detailed": [
+      {
+        "name": "冷藏上層",
+        "parent_type": "冷藏",
+        "capacity_ratio": 0.2
+      },
+      {
+        "name": "冷藏中層",
+        "parent_type": "冷藏",
+        "capacity_ratio": 0.25
+      },
+      {
+        "name": "冷藏下層",
+        "parent_type": "冷藏",
+        "capacity_ratio": 0.15
+      },
+      {
+        "name": "冷藏門架",
+        "parent_type": "冷藏",
+        "capacity_ratio": 0.05
+      },
+      {
+        "name": "冷凍上層",
+        "parent_type": "冷凍",
+        "capacity_ratio": 0.2
+      },
+      {
+        "name": "冷凍下層",
+        "parent_type": "冷凍",
+        "capacity_ratio": 0.15
+      }
+    ]
+  }
+}

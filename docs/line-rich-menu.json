@@ -1,0 +1,76 @@
+{
+  "size": {
+    "width": 2500,
+    "height": 1686
+  },
+  "selected": true,
+  "name": "AI Fridge Elf 主選單",
+  "chatBarText": "開啟選單",
+  "areas": [
+    {
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1250,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "查看冰箱",
+        "uri": "https://liff.line.me/YOUR_LIFF_ID"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1250,
+        "y": 0,
+        "width": 1250,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "新增食材",
+        "uri": "https://liff.line.me/YOUR_LIFF_ID/add"
+      }
+    },
+    {
+      "bounds": {
+        "x": 0,
+        "y": 843,
+        "width": 833,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "食譜建議",
+        "uri": "https://liff.line.me/YOUR_LIFF_ID/recipes"
+      }
+    },
+    {
+      "bounds": {
+        "x": 833,
+        "y": 843,
+        "width": 834,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "預算分析",
+        "uri": "https://liff.line.me/YOUR_LIFF_ID/budget"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1667,
+        "y": 843,
+        "width": 833,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "設定",
+        "uri": "https://liff.line.me/YOUR_LIFF_ID/settings"
+      }
+    }
+  ]
+}
