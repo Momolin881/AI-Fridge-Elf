@@ -13,8 +13,7 @@ from sqlalchemy import func
 from src.database import SessionLocal
 from src.models.notification_settings import NotificationSettings
 from src.models.food_item import FoodItem
-from src.models.fridge import Fridge
-from src.models.fridge_compartment import FridgeCompartment
+from src.models.fridge import Fridge, FridgeCompartment
 from src.services.line_bot import send_expiry_notification, send_space_warning
 
 logger = logging.getLogger(__name__)
