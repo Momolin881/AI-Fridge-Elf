@@ -2,7 +2,6 @@
 name = "ai-fridge-elf-backend"
 version = "0.1.0"
 description = "AI Fridge Elf - 數位冰箱管理系統後端服務"
-readme = "../README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
