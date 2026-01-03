@@ -21,7 +21,7 @@ RUN uv sync --no-dev
 COPY src ./src
 
 # 暴露端口
-EXPOSE 8000
+EXPOSE 8080
 
 # 啟動指令
-CMD ["sh", "-c", "uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "uv run uvicorn src.main:app --host 0.0.0.0 --port 8080"]
