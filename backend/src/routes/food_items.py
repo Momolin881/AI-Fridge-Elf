@@ -190,12 +190,12 @@ async def delete_food_item(id: int, db: DBSession, user_id: CurrentUserId):
 
 @router.post("/food-items/recognize", response_model=AIRecognitionResponse)
 async def recognize_food_item(
+    db: DBSession,
+    user_id: CurrentUserId,
     fridge_id: int = Form(...),
     storage_type: str = Form(...),
     compartment_id: Optional[int] = Form(None),
     image: UploadFile = File(...),
-    db: DBSession,
-    user_id: CurrentUserId,
 ):
     """
     AI 辨識食材圖片
