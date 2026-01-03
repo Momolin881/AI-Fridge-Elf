@@ -7,6 +7,7 @@ LINE Webhook 路由
 import logging
 import hmac
 import hashlib
+import base64
 
 from fastapi import APIRouter, Request, HTTPException, status
 from linebot import LineBotApi, WebhookHandler
@@ -43,7 +44,7 @@ def verify_signature(body: bytes, signature: str) -> bool:
         hashlib.sha256,
     ).digest()
 
-    expected_signature = hash_value.hex()
+    expected_signature = base64.b64encode(hash_value).decode('utf-8')
     return hmac.compare_digest(expected_signature, signature)
 
 
