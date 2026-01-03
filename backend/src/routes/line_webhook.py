@@ -12,6 +12,7 @@ from fastapi import APIRouter, Request, HTTPException, status
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.routes.dependencies import DBSession
