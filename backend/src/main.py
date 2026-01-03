@@ -10,6 +10,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
+from src.database import Base, engine
+from src import models  # 確保所有 models 都被導入
 from src.services import scheduler
 from src.routes import food_items, fridges, line_webhook, notifications, budget, recipes
 
@@ -19,10 +21,15 @@ async def lifespan(app: FastAPI):
     """
     應用程式生命週期管理
 
-    啟動時: 啟動排程器
+    啟動時: 建立資料庫表格、啟動排程器
     關閉時: 關閉排程器
     """
     # Startup
+    # 建立所有資料庫表格（如果不存在）
+    Base.metadata.create_all(bind=engine)
+    print("資料庫表格初始化完成")
+
+    # 啟動排程器
     scheduler.start_scheduler()
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
