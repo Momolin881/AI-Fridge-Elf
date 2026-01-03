@@ -27,8 +27,8 @@ router = APIRouter(tags=["Budget"])
 @router.get("/budget/stats", response_model=SpendingStatsResponse)
 async def get_spending_stats(
     period: str = Query('month', regex='^(month|year)$', description="統計期間（month 或 year）"),
-    db: DBSession = None,
-    line_user_id: CurrentUserId = None
+    db: DBSession,
+    line_user_id: CurrentUserId
 ):
     """
     獲取消費統計

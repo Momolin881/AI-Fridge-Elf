@@ -194,8 +194,8 @@ async def recognize_food_item(
     storage_type: str = Form(...),
     compartment_id: Optional[int] = Form(None),
     image: UploadFile = File(...),
-    db: DBSession = Depends(),
-    user_id: CurrentUserId = Depends(),
+    db: DBSession,
+    user_id: CurrentUserId,
 ):
     """
     AI 辨識食材圖片
