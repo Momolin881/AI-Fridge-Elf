@@ -8,14 +8,13 @@ import logging
 import hmac
 import hashlib
 
-from fastapi import APIRouter, Request, HTTPException, status, Depends
+from fastapi import APIRouter, Request, HTTPException, status
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 from src.config import settings
-from src.database import get_db
-from sqlalchemy.orm import Session
+from src.routes.dependencies import DBSession
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ def verify_signature(body: bytes, signature: str) -> bool:
 
 
 @router.post("/webhook/line")
-async def line_webhook(request: Request, db: Session = Depends(get_db)):
+async def line_webhook(request: Request, db: DBSession):
     """
     LINE Webhook 端點
 
