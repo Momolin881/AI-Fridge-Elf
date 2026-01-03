@@ -8,10 +8,11 @@ import logging
 import hmac
 import hashlib
 import base64
+import json
 
 from fastapi import APIRouter, Request, HTTPException, status
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError, LineBotApiError
+from linebot import LineBotApi
+from linebot.exceptions import LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 from src.config import settings
@@ -20,9 +21,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["LINE"])
 
-# LINE Bot API 和 WebhookHandler
+# LINE Bot API
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
 
 
 def verify_signature(body: bytes, signature: str) -> bool:
@@ -68,19 +68,20 @@ async def line_webhook(request: Request):
 
     # 解析事件
     try:
-        events = handler.parse(body.decode("utf-8"), signature)
-    except InvalidSignatureError:
-        logger.error("LINE webhook 簽名解析失敗")
+        data = json.loads(body.decode("utf-8"))
+        events = data.get("events", [])
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON 解析失敗: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON"
         ) from None
 
     # 處理每個事件
-    for event in events:
+    for event_data in events:
         try:
-            if isinstance(event, MessageEvent) and isinstance(event.message, TextMessage):
-                # 處理文字訊息事件
-                await handle_text_message(event)
+            # 檢查是否為文字訊息事件
+            if event_data.get("type") == "message" and event_data.get("message", {}).get("type") == "text":
+                await handle_text_message(event_data)
         except Exception as e:
             logger.error(f"處理 LINE 事件時發生錯誤: {e}")
             # 不拋出錯誤，避免 LINE 重送 webhook
@@ -88,7 +89,7 @@ async def line_webhook(request: Request):
     return {"status": "ok"}
 
 
-async def handle_text_message(event: MessageEvent):
+async def handle_text_message(event_data: dict):
     """
     處理文字訊息事件
 
@@ -96,10 +97,11 @@ async def handle_text_message(event: MessageEvent):
     未來可擴充為指令處理（如「查詢過期食材」、「新增食材」等）。
 
     Args:
-        event: LINE MessageEvent
+        event_data: LINE webhook 事件資料（dict）
     """
-    user_id = event.source.user_id
-    user_message = event.message.text.strip()
+    user_id = event_data.get("source", {}).get("userId")
+    user_message = event_data.get("message", {}).get("text", "").strip()
+    reply_token = event_data.get("replyToken")
 
     logger.info(f"使用者 {user_id} 傳送訊息: {user_message}")
 
@@ -120,6 +122,6 @@ async def handle_text_message(event: MessageEvent):
 
     # 回覆訊息
     try:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        line_bot_api.reply_message(reply_token, TextSendMessage(text=reply_text))
     except LineBotApiError as e:
         logger.error(f"LINE Bot API 錯誤: {e}")
