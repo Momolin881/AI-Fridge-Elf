@@ -13,10 +13,8 @@ from fastapi import APIRouter, Request, HTTPException, status
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from sqlalchemy.orm import Session
 
 from src.config import settings
-from src.routes.dependencies import DBSession
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +47,7 @@ def verify_signature(body: bytes, signature: str) -> bool:
 
 
 @router.post("/webhook/line")
-async def line_webhook(request: Request, db: DBSession):
+async def line_webhook(request: Request):
     """
     LINE Webhook 端點
 
@@ -82,7 +80,7 @@ async def line_webhook(request: Request, db: DBSession):
         try:
             if isinstance(event, MessageEvent) and isinstance(event.message, TextMessage):
                 # 處理文字訊息事件
-                await handle_text_message(event, db)
+                await handle_text_message(event)
         except Exception as e:
             logger.error(f"處理 LINE 事件時發生錯誤: {e}")
             # 不拋出錯誤，避免 LINE 重送 webhook
@@ -90,7 +88,7 @@ async def line_webhook(request: Request, db: DBSession):
     return {"status": "ok"}
 
 
-async def handle_text_message(event: MessageEvent, db: Session):
+async def handle_text_message(event: MessageEvent):
     """
     處理文字訊息事件
 
@@ -99,7 +97,6 @@ async def handle_text_message(event: MessageEvent, db: Session):
 
     Args:
         event: LINE MessageEvent
-        db: 資料庫 session
     """
     user_id = event.source.user_id
     user_message = event.message.text.strip()
