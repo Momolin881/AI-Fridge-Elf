@@ -40,7 +40,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # CORS 設定
-    CORS_ORIGINS: list[str] = ["https://liff.line.me"]
+    CORS_ORIGINS: list[str] = [
+        "https://liff.line.me",
+        "https://ai-fridge.zeabur.app",
+        "http://localhost:5173",  # 本地開發
+    ]
 
     # 排程設定
     EXPIRY_WARNING_DAYS: int = 3  # 效期提醒天數（預設提前 3 天）
