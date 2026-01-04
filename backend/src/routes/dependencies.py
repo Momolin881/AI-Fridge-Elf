@@ -26,13 +26,10 @@ async def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> str:
     """
-    驗證 LIFF access token 並返回 LINE user_id
+    從 Authorization header 取得 LINE user_id (MVP 簡化版)
 
-    工作流程:
-    1. 從 Authorization header 取得 Bearer token
-    2. 使用 LINE API 驗證 token
-    3. 取得使用者 profile
-    4. 返回 user_id
+    TODO: 完整版應該驗證 LIFF access token 的有效性
+    目前為了 MVP，直接從 header 取得 user_id
 
     Args:
         credentials: HTTPBearer 自動解析的認證憑證
@@ -41,30 +38,18 @@ async def get_current_user_id(
         str: LINE user_id
 
     Raises:
-        HTTPException: token 無效或過期時拋出 401 錯誤
-
-    使用範例:
-        @app.get("/me")
-        def get_me(user_id: str = Depends(get_current_user_id)):
-            return {"user_id": user_id}
+        HTTPException: user_id 不存在時拋出 401 錯誤
     """
-    try:
-        # 使用 LINE API 驗證 access token 並取得使用者資料
-        profile = line_bot_api.get_profile(credentials.credentials)
-        return profile.user_id
-    except LineBotApiError as e:
-        # token 無效或已過期
+    user_id = credentials.credentials
+
+    if not user_id or len(user_id) < 10:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired access token",
+            detail="Invalid LINE user ID",
             headers={"WWW-Authenticate": "Bearer"},
-        ) from e
-    except Exception as e:
-        # 其他錯誤（網路問題等）
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to verify access token",
-        ) from e
+        )
+
+    return user_id
 
 
 # 類型別名（方便在路由中使用）
