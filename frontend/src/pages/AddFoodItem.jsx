@@ -65,7 +65,7 @@ function AddFoodItem() {
   };
 
   const handleImageUpload = async (file) => {
-    const fridgeId = form.getFieldValue('fridge_id');
+    const fridgeId = form.getFieldValue('fridge_id') || selectedFridge;
     const storageType = form.getFieldValue('storage_type');
 
     if (!fridgeId || !storageType) {
@@ -77,8 +77,8 @@ function AddFoodItem() {
       setAiRecognizing(true);
       message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
 
-      // 呼叫 AI 辨識 API
-      const result = await recognizeFoodImage(file, fridgeId, storageType);
+      // 呼叫 AI 辨識 API（確保 fridgeId 是數字）
+      const result = await recognizeFoodImage(file, Number(fridgeId), storageType);
 
       message.success({ content: result.confidence, key: 'ai-recognition' });
 
@@ -113,6 +113,11 @@ function AddFoodItem() {
         purchase_date: values.purchase_date ? values.purchase_date.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
         recognized_by_ai: values.recognized_by_ai || 0,
       };
+
+      // 修復：移除無效的 compartment_id（如果是字符串或不是數字）
+      if (foodData.compartment_id && typeof foodData.compartment_id !== 'number') {
+        delete foodData.compartment_id;
+      }
 
       await createFoodItem(foodData);
       message.success('新增食材成功！');

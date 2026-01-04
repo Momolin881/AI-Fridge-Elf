@@ -69,7 +69,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """
     errors = exc.errors()
     logger.error(f"❌ 422 Validation Error on {request.method} {request.url.path}")
-    logger.error(f"Request body: {await request.body()}")
     logger.error(f"Validation errors: {errors}")
 
     # 返回標準的 422 錯誤回應
