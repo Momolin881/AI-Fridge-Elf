@@ -37,6 +37,9 @@ class FoodItemCreate(FoodItemBase):
 
     fridge_id: int = Field(..., description="冰箱 ID")
     compartment_id: Optional[int] = Field(None, description="分區 ID（細分模式使用）")
+    image_url: Optional[str] = Field(None, max_length=512, description="圖片 URL（AI 辨識使用）")
+    cloudinary_public_id: Optional[str] = Field(None, max_length=255, description="Cloudinary public_id")
+    recognized_by_ai: int = Field(0, description="是否由 AI 辨識（0: 手動, 1: AI）")
 
 
 class FoodItemUpdate(BaseModel):
