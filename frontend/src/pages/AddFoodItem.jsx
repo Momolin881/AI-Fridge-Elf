@@ -189,7 +189,7 @@ function AddFoodItem() {
             }}
           >
             {/* 冰箱選擇（如果有多個冰箱） */}
-            {fridges.length > 1 && (
+            {fridges.length > 1 ? (
               <Form.Item
                 label="選擇冰箱"
                 name="fridge_id"
@@ -202,6 +202,11 @@ function AddFoodItem() {
                     </Radio>
                   ))}
                 </Radio.Group>
+              </Form.Item>
+            ) : (
+              // 只有一個冰箱時，使用隱藏欄位
+              <Form.Item name="fridge_id" hidden>
+                <Input />
               </Form.Item>
             )}
 
