@@ -44,7 +44,7 @@ async def list_food_items(
     query = (
         db.query(FoodItem)
         .join(Fridge, FoodItem.fridge_id == Fridge.id)
-        .filter(Fridge.user_id == int(user_id))
+        .filter(Fridge.user_id == user_id)
     )
 
     # 篩選條件
@@ -78,7 +78,7 @@ async def get_food_item(id: int, db: DBSession, user_id: CurrentUserId):
     food_item = (
         db.query(FoodItem)
         .join(Fridge, FoodItem.fridge_id == Fridge.id)
-        .filter(FoodItem.id == id, Fridge.user_id == int(user_id))
+        .filter(FoodItem.id == id, Fridge.user_id == user_id)
         .first()
     )
 
@@ -100,7 +100,7 @@ async def create_food_item(data: FoodItemCreate, db: DBSession, user_id: Current
     """新增食材"""
     # 驗證冰箱所有權
     fridge = db.query(Fridge).filter(
-        Fridge.id == data.fridge_id, Fridge.user_id == int(user_id)
+        Fridge.id == data.fridge_id, Fridge.user_id == user_id
     ).first()
 
     if not fridge:
@@ -131,7 +131,7 @@ async def update_food_item(id: int, data: FoodItemUpdate, db: DBSession, user_id
     food_item = (
         db.query(FoodItem)
         .join(Fridge, FoodItem.fridge_id == Fridge.id)
-        .filter(FoodItem.id == id, Fridge.user_id == int(user_id))
+        .filter(FoodItem.id == id, Fridge.user_id == user_id)
         .first()
     )
 
@@ -165,7 +165,7 @@ async def delete_food_item(id: int, db: DBSession, user_id: CurrentUserId):
     food_item = (
         db.query(FoodItem)
         .join(Fridge, FoodItem.fridge_id == Fridge.id)
-        .filter(FoodItem.id == id, Fridge.user_id == int(user_id))
+        .filter(FoodItem.id == id, Fridge.user_id == user_id)
         .first()
     )
 
@@ -215,7 +215,7 @@ async def recognize_food_item(
 
     # 驗證冰箱所有權
     fridge = db.query(Fridge).filter(
-        Fridge.id == fridge_id, Fridge.user_id == int(user_id)
+        Fridge.id == fridge_id, Fridge.user_id == user_id
     ).first()
 
     if not fridge:

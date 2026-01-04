@@ -28,7 +28,7 @@ router = APIRouter(tags=["Fridges"])
 @router.get("/fridges", response_model=list[FridgeResponse])
 async def list_fridges(db: DBSession, user_id: CurrentUserId):
     """取得使用者的所有冰箱"""
-    fridges = db.query(Fridge).filter(Fridge.user_id == int(user_id)).all()
+    fridges = db.query(Fridge).filter(Fridge.user_id == user_id).all()
     return fridges
 
 
@@ -36,7 +36,7 @@ async def list_fridges(db: DBSession, user_id: CurrentUserId):
 async def create_fridge(data: FridgeCreate, db: DBSession, user_id: CurrentUserId):
     """新增冰箱"""
     # 建立冰箱
-    fridge = Fridge(user_id=int(user_id), **data.model_dump())
+    fridge = Fridge(user_id=user_id, **data.model_dump())
     db.add(fridge)
     db.commit()
     db.refresh(fridge)
@@ -49,7 +49,7 @@ async def create_fridge(data: FridgeCreate, db: DBSession, user_id: CurrentUserI
 async def get_fridge(id: int, db: DBSession, user_id: CurrentUserId):
     """取得單一冰箱（含分區）"""
     # 查詢冰箱
-    fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == int(user_id)).first()
+    fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == user_id).first()
 
     if not fridge:
         raise HTTPException(
@@ -63,7 +63,7 @@ async def get_fridge(id: int, db: DBSession, user_id: CurrentUserId):
 async def update_fridge(id: int, data: FridgeUpdate, db: DBSession, user_id: CurrentUserId):
     """更新冰箱"""
     # 查詢冰箱
-    fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == int(user_id)).first()
+    fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == user_id).first()
 
     if not fridge:
         raise HTTPException(
@@ -86,7 +86,7 @@ async def update_fridge(id: int, data: FridgeUpdate, db: DBSession, user_id: Cur
 async def create_compartment(id: int, data: FridgeCompartmentCreate, db: DBSession, user_id: CurrentUserId):
     """新增分區"""
     # 驗證冰箱所有權
-    fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == int(user_id)).first()
+    fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == user_id).first()
 
     if not fridge:
         raise HTTPException(
