@@ -5,15 +5,20 @@ FastAPI 主應用程式
 """
 
 from contextlib import asynccontextmanager
+import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from src.config import settings
 from src.database import Base, engine
 from src import models  # 確保所有 models 都被導入
 from src.services import scheduler
 from src.routes import food_items, fridges, line_webhook, notifications, budget, recipes
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -54,6 +59,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# 全局異常處理器：記錄詳細的 422 驗證錯誤
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    捕獲並記錄詳細的請求驗證錯誤（422）
+    """
+    errors = exc.errors()
+    logger.error(f"❌ 422 Validation Error on {request.method} {request.url.path}")
+    logger.error(f"Request body: {await request.body()}")
+    logger.error(f"Validation errors: {errors}")
+
+    # 返回標準的 422 錯誤回應
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": errors},
+    )
 
 
 # 健康檢查端點
