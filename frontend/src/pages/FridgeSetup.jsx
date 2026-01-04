@@ -6,7 +6,6 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Layout,
   Card,
@@ -26,7 +25,6 @@ const { Content } = Layout;
 const { Title, Paragraph } = Typography;
 
 function FridgeSetup() {
-  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('simple'); // simple or detailed
@@ -60,7 +58,8 @@ function FridgeSetup() {
       }
 
       message.success('冰箱設定完成！');
-      navigate('/');
+      // 強制重新載入頁面，讓 App.jsx 重新檢查冰箱狀態
+      window.location.href = '/';
     } catch (error) {
       console.error('建立冰箱失敗:', error);
       message.error('建立冰箱失敗，請稍後再試');

@@ -57,7 +57,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-python-version = "3.11"
+# uv 配置：移除了 python-version（不支持的配置項）
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
