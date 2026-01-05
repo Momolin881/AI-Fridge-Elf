@@ -107,9 +107,16 @@ export const getFoodItem = (itemId) => {
  * @returns {Promise<Object>} 辨識結果
  */
 export const recognizeFoodImage = (imageFile, fridgeId, storageType, compartmentId = null) => {
+  // 嚴格驗證 fridgeId 必須是有效數字
+  const validFridgeId = Number(fridgeId);
+  if (!fridgeId || isNaN(validFridgeId) || validFridgeId <= 0) {
+    console.error('❌ Invalid fridge_id in recognizeFoodImage:', { fridgeId, validFridgeId });
+    return Promise.reject(new Error('fridge_id 必須是有效的數字'));
+  }
+
   const formData = new FormData();
   formData.append('image', imageFile);
-  formData.append('fridge_id', fridgeId);
+  formData.append('fridge_id', validFridgeId);  // 使用驗證過的數字
   formData.append('storage_type', storageType);
   if (compartmentId) {
     formData.append('compartment_id', compartmentId);
