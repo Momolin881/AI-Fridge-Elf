@@ -14,8 +14,10 @@ import { recognizeFoodImage } from '@services/api';
 const ImageUploader = ({
   onImageRecognized,
   onImageSelected,
+  onUpload, // 新增：支援外部自訂上傳處理
   maxSize = 10, // MB
   autoRecognize = true,
+  loading = false, // 新增：外部載入狀態
 }) => {
   const [imageUrl, setImageUrl] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -55,7 +57,13 @@ const ImageUploader = ({
     setImageFile(file);
     onImageSelected?.(file);
 
-    // 如果啟用自動辨識，立即辨識
+    // 如果有提供 onUpload（外部自訂處理），優先使用
+    if (onUpload) {
+      await onUpload(file);
+      return;
+    }
+
+    // 否則，如果啟用自動辨識，立即辨識
     if (autoRecognize) {
       await recognizeImage(file);
     }
@@ -164,8 +172,8 @@ const ImageUploader = ({
         </div>
       )}
 
-      {/* 辨識中 */}
-      {recognizing && (
+      {/* 辨識中（使用外部 loading 狀態或內部 recognizing 狀態） */}
+      {(loading || recognizing) && (
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
           <Spin size="large" />
           <p style={{ marginTop: '10px', color: '#666' }}>
@@ -201,8 +209,10 @@ const ImageUploader = ({
 ImageUploader.propTypes = {
   onImageRecognized: PropTypes.func,
   onImageSelected: PropTypes.func,
+  onUpload: PropTypes.func, // 外部自訂上傳處理（會覆蓋 autoRecognize）
   maxSize: PropTypes.number,
   autoRecognize: PropTypes.bool,
+  loading: PropTypes.bool, // 外部載入狀態
 };
 
 export default ImageUploader;
