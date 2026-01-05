@@ -148,6 +148,26 @@ function FridgeSetup() {
               </Radio.Group>
             </Form.Item>
 
+            {/* 細分模式預覽 */}
+            {mode === 'detailed' && (
+              <Card
+                size="small"
+                title="📋 將自動建立以下分區"
+                style={{ marginBottom: 16, background: '#f0f5ff', borderColor: '#adc6ff' }}
+              >
+                <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <div>🧊 <strong>冷藏上層</strong></div>
+                  <div>🧊 <strong>冷藏中層</strong></div>
+                  <div>🧊 <strong>冷藏下層</strong></div>
+                  <div>❄️ <strong>冷凍上層</strong></div>
+                  <div>❄️ <strong>冷凍下層</strong></div>
+                </Space>
+                <Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0, fontSize: 12 }}>
+                  完成設定後，您可以在新增食材時選擇這些分區
+                </Paragraph>
+              </Card>
+            )}
+
             {/* 提交按鈕 */}
             <Form.Item style={{ marginTop: 32 }}>
               <Button
