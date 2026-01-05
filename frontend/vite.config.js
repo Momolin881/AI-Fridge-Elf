@@ -5,10 +5,16 @@ import { execSync } from 'child_process'
 
 // 獲取 Git commit hash
 const getGitHash = () => {
+  // 優先使用環境變數（Zeabur/GitHub Actions）
+  if (process.env.VITE_GIT_HASH) {
+    return process.env.VITE_GIT_HASH
+  }
+
+  // 本地開發時從 git 抓取
   try {
     return execSync('git rev-parse --short HEAD').toString().trim()
   } catch (e) {
-    return 'unknown'
+    return 'dev'
   }
 }
 
