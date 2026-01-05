@@ -60,12 +60,14 @@ async def list_food_items(
     if is_expired is not None:
         food_items = [item for item in food_items if item.is_expired == is_expired]
 
-    # 組裝回應（包含計算屬性）
+    # 組裝回應（包含計算屬性和分區名稱）
     results = []
     for item in food_items:
         item_dict = FoodItemResponse.model_validate(item).model_dump()
         item_dict["is_expired"] = item.is_expired
         item_dict["days_until_expiry"] = item.days_until_expiry
+        # 加入分區名稱（如果有）
+        item_dict["compartment"] = item.compartment.name if item.compartment else None
         results.append(FoodItemResponse(**item_dict))
 
     return results
@@ -87,10 +89,12 @@ async def get_food_item(id: int, db: DBSession, user_id: CurrentUserId):
             status_code=status.HTTP_404_NOT_FOUND, detail="食材不存在或無權限存取"
         )
 
-    # 組裝回應（包含計算屬性）
+    # 組裝回應（包含計算屬性和分區名稱）
     item_dict = FoodItemResponse.model_validate(food_item).model_dump()
     item_dict["is_expired"] = food_item.is_expired
     item_dict["days_until_expiry"] = food_item.days_until_expiry
+    # 加入分區名稱（如果有）
+    item_dict["compartment"] = food_item.compartment.name if food_item.compartment else None
 
     return FoodItemResponse(**item_dict)
 
@@ -116,10 +120,12 @@ async def create_food_item(data: FoodItemCreate, db: DBSession, user_id: Current
 
     logger.info(f"使用者 {user_id} 新增食材: {food_item.name} (ID: {food_item.id})")
 
-    # 組裝回應
+    # 組裝回應（包含計算屬性和分區名稱）
     item_dict = FoodItemResponse.model_validate(food_item).model_dump()
     item_dict["is_expired"] = food_item.is_expired
     item_dict["days_until_expiry"] = food_item.days_until_expiry
+    # 加入分區名稱（如果有）
+    item_dict["compartment"] = food_item.compartment.name if food_item.compartment else None
 
     return FoodItemResponse(**item_dict)
 
@@ -150,10 +156,12 @@ async def update_food_item(id: int, data: FoodItemUpdate, db: DBSession, user_id
 
     logger.info(f"使用者 {user_id} 更新食材: {food_item.name} (ID: {food_item.id})")
 
-    # 組裝回應
+    # 組裝回應（包含計算屬性和分區名稱）
     item_dict = FoodItemResponse.model_validate(food_item).model_dump()
     item_dict["is_expired"] = food_item.is_expired
     item_dict["days_until_expiry"] = food_item.days_until_expiry
+    # 加入分區名稱（如果有）
+    item_dict["compartment"] = food_item.compartment.name if food_item.compartment else None
 
     return FoodItemResponse(**item_dict)
 

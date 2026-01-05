@@ -71,6 +71,7 @@ class FoodItemResponse(FoodItemBase):
     id: int
     fridge_id: int
     compartment_id: Optional[int] = None
+    compartment: Optional[str] = None  # 分區名稱（供前端顯示）
     image_url: Optional[str] = None
     cloudinary_public_id: Optional[str] = None
     recognized_by_ai: int

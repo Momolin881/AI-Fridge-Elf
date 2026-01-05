@@ -68,8 +68,15 @@ function AddFoodItem() {
     const fridgeId = form.getFieldValue('fridge_id') || selectedFridge;
     const storageType = form.getFieldValue('storage_type');
 
-    if (!fridgeId || !storageType) {
-      message.warning('請先選擇冰箱和儲存類型');
+    // 嚴格驗證 fridgeId（確保是有效數字）
+    const validFridgeId = Number(fridgeId);
+    if (!storageType) {
+      message.warning('請先選擇儲存類型');
+      return;
+    }
+    if (!fridgeId || isNaN(validFridgeId) || validFridgeId <= 0) {
+      message.warning('請先選擇冰箱');
+      console.error('❌ Invalid fridge_id:', { fridgeId, selectedFridge, formValue: form.getFieldValue('fridge_id') });
       return;
     }
 
@@ -77,8 +84,8 @@ function AddFoodItem() {
       setAiRecognizing(true);
       message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
 
-      // 呼叫 AI 辨識 API（確保 fridgeId 是數字）
-      const result = await recognizeFoodImage(file, Number(fridgeId), storageType);
+      // 呼叫 AI 辨識 API（使用已驗證的數字）
+      const result = await recognizeFoodImage(file, validFridgeId, storageType);
 
       message.success({ content: result.confidence, key: 'ai-recognition' });
 
