@@ -23,7 +23,7 @@ import {
 } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { getFoodItems, getFridges } from '../services/api';
-import { FoodItemCard } from '../components';
+import { FoodItemCard, VersionFooter } from '../components';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -205,6 +205,9 @@ function Home() {
             }
           }}
         />
+
+        {/* 版本資訊 */}
+        <VersionFooter />
       </Content>
     </Layout>
   );

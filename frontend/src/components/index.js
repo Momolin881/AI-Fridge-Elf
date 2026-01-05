@@ -5,3 +5,4 @@
 export { default as FoodItemCard } from './FoodItemCard';
 export { default as CompartmentSelector } from './CompartmentSelector';
 export { default as ImageUploader } from './ImageUploader';
+export { default as VersionFooter } from './VersionFooter';

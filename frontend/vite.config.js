@@ -1,6 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { execSync } from 'child_process'
+
+// 獲取 Git commit hash
+const getGitHash = () => {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim()
+  } catch (e) {
+    return 'unknown'
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -60,5 +70,6 @@ export default defineConfig({
 
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+    __GIT_HASH__: JSON.stringify(getGitHash()),
   },
 })
