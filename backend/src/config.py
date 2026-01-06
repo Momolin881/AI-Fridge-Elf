@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     NOTIFICATION_TIME_MINUTE: int = 0  # 通知時間（分鐘）
 
     # AI Vision 設定
-    AI_VISION_MODEL: str = "gpt-4-vision-preview"
+    AI_VISION_MODEL: str = "gpt-4o"  # 更新為新版本模型（gpt-4-vision-preview 已棄用）
     AI_VISION_MAX_TOKENS: int = 300
     AI_VISION_TEMPERATURE: float = 0.2
     IMAGE_MAX_SIZE: int = 1024  # 圖片壓縮最大尺寸（像素）
