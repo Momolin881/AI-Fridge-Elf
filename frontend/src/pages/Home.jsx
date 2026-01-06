@@ -21,6 +21,7 @@ import {
   Card,
   Statistic,
   Modal,
+  Tag,
 } from 'antd';
 import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { getFoodItems, getFridges, deleteFoodItem } from '../services/api';
