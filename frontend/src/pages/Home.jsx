@@ -20,9 +20,10 @@ import {
   Progress,
   Card,
   Statistic,
+  Modal,
 } from 'antd';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { getFoodItems, getFridges } from '../services/api';
+import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { getFoodItems, getFridges, deleteFoodItem } from '../services/api';
 import { FoodItemCard, VersionFooter } from '../components';
 
 const { Content } = Layout;
@@ -83,6 +84,33 @@ function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 處理編輯食材
+  const handleEdit = (item) => {
+    navigate(`/edit/${item.id}`);
+  };
+
+  // 處理刪除食材
+  const handleDelete = (item) => {
+    Modal.confirm({
+      title: '確認刪除',
+      icon: <ExclamationCircleOutlined />,
+      content: `確定要刪除「${item.name}」嗎？此操作無法復原。`,
+      okText: '刪除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteFoodItem(item.id);
+          message.success('食材已刪除');
+          await loadData(); // 重新載入資料
+        } catch (error) {
+          console.error('刪除失敗:', error);
+          message.error('刪除失敗，請稍後再試');
+        }
+      },
+    });
   };
 
   // 計算統計數據
@@ -185,7 +213,8 @@ function Home() {
                 key={item.id}
                 item={item}
                 onClick={() => navigate(`/edit/${item.id}`)}
-                onUpdate={loadData}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
               />
             )}
           />
