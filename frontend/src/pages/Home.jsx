@@ -132,13 +132,33 @@ function Home() {
   // 分區排序順序
   const compartmentOrder = ['冷藏上層', '冷藏中層', '冷藏下層', '冷凍上層', '冷凍下層'];
 
-  // 分組和排序食材（細分模式）
+  // 分組和排序食材
   const groupedItems = () => {
     const isDetailedMode = fridges.length > 0 && fridges[0].compartment_mode === 'detailed';
 
     if (!isDetailedMode) {
-      // 簡易模式：不分組
-      return { ungrouped: filteredItems };
+      // 簡易模式：按儲存類型分組（🧊 冷藏 / ❄️ 冷凍）
+      const groups = {
+        '🧊 冷藏': [],
+        '❄️ 冷凍': [],
+      };
+
+      filteredItems.forEach((item) => {
+        if (item.storage_type === '冷凍') {
+          groups['❄️ 冷凍'].push(item);
+        } else {
+          groups['🧊 冷藏'].push(item);
+        }
+      });
+
+      // 移除空分組
+      Object.keys(groups).forEach((key) => {
+        if (groups[key].length === 0) {
+          delete groups[key];
+        }
+      });
+
+      return groups;
     }
 
     // 細分模式：按分區分組
@@ -268,14 +288,19 @@ function Home() {
 
             return (
               <Space direction="vertical" style={{ width: '100%' }} size="large">
-                {Object.entries(groups).map(([compartment, items]) => (
-                  <div key={compartment}>
-                    {/* 分區標題（僅細分模式顯示） */}
-                    {isDetailedMode && compartment !== 'ungrouped' && (
-                      <Title level={5} style={{ marginBottom: 12, color: '#722ed1' }}>
-                        📍 {compartment}
-                      </Title>
-                    )}
+                {Object.entries(groups).map(([groupName, items]) => (
+                  <div key={groupName}>
+                    {/* 分組標題 */}
+                    <Title
+                      level={5}
+                      style={{
+                        marginBottom: 12,
+                        color: isDetailedMode ? '#722ed1' : '#1890ff',
+                        fontSize: isDetailedMode ? '16px' : '18px',
+                      }}
+                    >
+                      {isDetailedMode ? `📍 ${groupName}` : groupName}
+                    </Title>
 
                     {/* 食材列表 */}
                     <List
