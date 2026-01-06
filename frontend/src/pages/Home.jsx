@@ -129,6 +129,46 @@ function Home() {
     ? Math.round(((stats.expired + stats.expiringSoon) / stats.total) * 100)
     : 0;
 
+  // 分區排序順序
+  const compartmentOrder = ['冷藏上層', '冷藏中層', '冷藏下層', '冷凍上層', '冷凍下層'];
+
+  // 分組和排序食材（細分模式）
+  const groupedItems = () => {
+    const isDetailedMode = fridges.length > 0 && fridges[0].compartment_mode === 'detailed';
+
+    if (!isDetailedMode) {
+      // 簡易模式：不分組
+      return { ungrouped: filteredItems };
+    }
+
+    // 細分模式：按分區分組
+    const groups = {};
+    filteredItems.forEach((item) => {
+      const compartment = item.compartment || '未分類';
+      if (!groups[compartment]) {
+        groups[compartment] = [];
+      }
+      groups[compartment].push(item);
+    });
+
+    // 按照預定順序排序分區
+    const sortedGroups = {};
+    compartmentOrder.forEach((compartment) => {
+      if (groups[compartment]) {
+        sortedGroups[compartment] = groups[compartment];
+      }
+    });
+
+    // 加入未在預定順序中的分區
+    Object.keys(groups).forEach((compartment) => {
+      if (!compartmentOrder.includes(compartment)) {
+        sortedGroups[compartment] = groups[compartment];
+      }
+    });
+
+    return sortedGroups;
+  };
+
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <Content style={{ padding: '16px' }}>
@@ -140,10 +180,26 @@ function Home() {
         {/* 統計卡片 */}
         <Card style={{ marginBottom: 16 }}>
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            {/* 冰箱資訊 */}
+            {fridges.length > 0 && (
+              <div style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 14, color: '#666' }}>
+                    {fridges[0].name}
+                  </span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Tag color={fridges[0].compartment_mode === 'detailed' ? 'purple' : 'default'}>
+                      {fridges[0].compartment_mode === 'detailed' ? '🗂️ 細分模式' : '📦 簡易模式'}
+                    </Tag>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-around' }}>
               <Statistic title="總數" value={stats.total} suffix="項" />
-              <Statistic title="冷藏" value={stats.冷藏} suffix="項" />
-              <Statistic title="冷凍" value={stats.冷凍} suffix="項" />
+              <Statistic title="🧊 冷藏" value={stats.冷藏} suffix="項" />
+              <Statistic title="❄️ 冷凍" value={stats.冷凍} suffix="項" />
             </div>
             <div>
               <div style={{ marginBottom: 8 }}>
@@ -206,18 +262,39 @@ function Home() {
             style={{ marginTop: 60 }}
           />
         ) : (
-          <List
-            dataSource={filteredItems}
-            renderItem={(item) => (
-              <FoodItemCard
-                key={item.id}
-                item={item}
-                onClick={() => navigate(`/edit/${item.id}`)}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            )}
-          />
+          (() => {
+            const groups = groupedItems();
+            const isDetailedMode = fridges.length > 0 && fridges[0].compartment_mode === 'detailed';
+
+            return (
+              <Space direction="vertical" style={{ width: '100%' }} size="large">
+                {Object.entries(groups).map(([compartment, items]) => (
+                  <div key={compartment}>
+                    {/* 分區標題（僅細分模式顯示） */}
+                    {isDetailedMode && compartment !== 'ungrouped' && (
+                      <Title level={5} style={{ marginBottom: 12, color: '#722ed1' }}>
+                        📍 {compartment}
+                      </Title>
+                    )}
+
+                    {/* 食材列表 */}
+                    <List
+                      dataSource={items}
+                      renderItem={(item) => (
+                        <FoodItemCard
+                          key={item.id}
+                          item={item}
+                          onClick={() => navigate(`/edit/${item.id}`)}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      )}
+                    />
+                  </div>
+                ))}
+              </Space>
+            );
+          })()
         )}
 
         {/* 新增按鈕 */}

@@ -95,9 +95,20 @@ const FoodItemCard = ({
         }
         description={
           <Space direction="vertical" size="small" style={{ width: '100%' }}>
-            {item.compartment && (
-              <Tag color="purple">{item.compartment}</Tag>
-            )}
+            {/* 儲存類型標籤 */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {item.storage_type && (
+                <Tag
+                  color={item.storage_type === '冷凍' ? 'blue' : 'cyan'}
+                  icon={item.storage_type === '冷凍' ? '❄️' : '🧊'}
+                >
+                  {item.storage_type === '冷凍' ? '❄️ 冷凍' : '🧊 冷藏'}
+                </Tag>
+              )}
+              {item.compartment && (
+                <Tag color="purple">{item.compartment}</Tag>
+              )}
+            </div>
 
             {item.expiry_date && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -126,6 +137,7 @@ FoodItemCard.propTypes = {
     name: PropTypes.string.isRequired,
     quantity: PropTypes.number,
     expiry_date: PropTypes.string,
+    storage_type: PropTypes.string,
     compartment: PropTypes.string,
     price: PropTypes.number,
     volume_liters: PropTypes.number,
