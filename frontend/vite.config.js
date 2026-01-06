@@ -44,36 +44,8 @@ export default defineConfig({
         drop_debugger: true,
       },
     },
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // React 核心庫
-          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-            return 'vendor-react';
-          }
-          // LINE LIFF SDK
-          if (id.includes('@line/liff')) {
-            return 'vendor-liff';
-          }
-          // Ant Design - 細分成多個 chunk
-          if (id.includes('antd')) {
-            // Ant Design 圖標單獨分離（通常很大）
-            if (id.includes('@ant-design/icons')) {
-              return 'vendor-antd-icons';
-            }
-            return 'vendor-antd';
-          }
-          // Chart.js
-          if (id.includes('chart.js') || id.includes('react-chartjs-2')) {
-            return 'vendor-charts';
-          }
-          // 其他 node_modules
-          if (id.includes('node_modules')) {
-            return 'vendor-other';
-          }
-        },
-      },
-    },
+    // 移除 manualChunks 配置，讓 Vite 自動處理代碼分割
+    // 避免模塊載入順序問題導致的 "Cannot read properties of undefined" 錯誤
   },
 
   resolve: {
