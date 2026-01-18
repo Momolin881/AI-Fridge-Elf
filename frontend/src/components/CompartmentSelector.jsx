@@ -68,6 +68,9 @@ const CompartmentSelector = ({
     return acc;
   }, {});
 
+  // 固定順序：冷藏在前，冷凍在後
+  const orderedGroups = ['冷藏', '冷凍', '其他'].filter((g) => groupedOptions[g]);
+
   return (
     <Select
       value={value}
@@ -77,9 +80,9 @@ const CompartmentSelector = ({
       style={{ width: '100%', ...style }}
       suffixIcon={<FolderOutlined />}
     >
-      {Object.entries(groupedOptions).map(([parent, options]) => (
-        <Select.OptGroup key={parent} label={parent}>
-          {options.map((option) => (
+      {orderedGroups.map((parent) => (
+        <Select.OptGroup key={parent} label={parent === '冷藏' ? '🧊 冷藏' : parent === '冷凍' ? '❄️ 冷凍' : parent}>
+          {groupedOptions[parent].map((option) => (
             <Option key={option.value} value={option.value}>
               {option.label}
             </Option>
@@ -91,12 +94,12 @@ const CompartmentSelector = ({
 };
 
 CompartmentSelector.propTypes = {
-  value: PropTypes.string,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onChange: PropTypes.func,
   mode: PropTypes.oneOf(['simple', 'detailed']),
   customCompartments: PropTypes.arrayOf(
     PropTypes.shape({
-      value: PropTypes.string.isRequired,
+      value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
       label: PropTypes.string.isRequired,
       parent: PropTypes.string,
     })

@@ -8,12 +8,19 @@
 import liff from '@line/liff';
 
 const LIFF_ID = import.meta.env.VITE_LIFF_ID;
+const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
 /**
  * 初始化 LIFF SDK
  * @returns {Promise<boolean>} 初始化成功返回 true，失敗返回 false
  */
 export const initializeLiff = async () => {
+  // 開發模式：跳過 LIFF 初始化
+  if (DEV_MODE) {
+    console.log('Development mode: Skipping LIFF initialization');
+    return true;
+  }
+
   try {
     await liff.init({ liffId: LIFF_ID });
 
@@ -35,6 +42,10 @@ export const initializeLiff = async () => {
  * @returns {string|null} Access Token 或 null
  */
 export const getLiffAccessToken = () => {
+  // 開發模式：返回測試 token
+  if (DEV_MODE) {
+    return 'dev-test-token';
+  }
   if (liff.isLoggedIn()) {
     return liff.getAccessToken();
   }

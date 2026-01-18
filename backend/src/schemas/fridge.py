@@ -92,6 +92,7 @@ class FridgeResponse(FridgeBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
+    compartment_mode: str = Field(default="simple", description="分區模式：simple 或 detailed")
 
     model_config = {"from_attributes": True}
 

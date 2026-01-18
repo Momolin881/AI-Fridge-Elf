@@ -78,8 +78,8 @@ class FoodItemResponse(FoodItemBase):
     created_at: datetime
     updated_at: datetime
 
-    # 計算屬性
-    is_expired: bool
+    # 計算屬性（由後端填入）
+    is_expired: bool = False
     days_until_expiry: Optional[int] = None
 
     model_config = {"from_attributes": True}

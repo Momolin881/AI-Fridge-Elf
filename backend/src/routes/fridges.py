@@ -29,7 +29,22 @@ router = APIRouter(tags=["Fridges"])
 async def list_fridges(db: DBSession, user_id: CurrentUserId):
     """取得使用者的所有冰箱"""
     fridges = db.query(Fridge).filter(Fridge.user_id == user_id).all()
-    return fridges
+
+    # 為每個冰箱計算 compartment_mode
+    result = []
+    for fridge in fridges:
+        fridge_dict = {
+            "id": fridge.id,
+            "user_id": fridge.user_id,
+            "model_name": fridge.model_name,
+            "total_capacity_liters": fridge.total_capacity_liters,
+            "created_at": fridge.created_at,
+            "updated_at": fridge.updated_at,
+            "compartment_mode": "detailed" if len(fridge.compartments) > 0 else "simple",
+        }
+        result.append(fridge_dict)
+
+    return result
 
 
 @router.post("/fridges", response_model=FridgeResponse, status_code=status.HTTP_201_CREATED)
@@ -42,7 +57,17 @@ async def create_fridge(data: FridgeCreate, db: DBSession, user_id: CurrentUserI
     db.refresh(fridge)
 
     logger.info(f"使用者 {user_id} 新增冰箱 (ID: {fridge.id})")
-    return fridge
+
+    # 返回包含 compartment_mode 的結果
+    return {
+        "id": fridge.id,
+        "user_id": fridge.user_id,
+        "model_name": fridge.model_name,
+        "total_capacity_liters": fridge.total_capacity_liters,
+        "created_at": fridge.created_at,
+        "updated_at": fridge.updated_at,
+        "compartment_mode": "detailed" if len(fridge.compartments) > 0 else "simple",
+    }
 
 
 @router.get("/fridges/{id}", response_model=FridgeDetailResponse)
@@ -56,7 +81,17 @@ async def get_fridge(id: int, db: DBSession, user_id: CurrentUserId):
             status_code=status.HTTP_404_NOT_FOUND, detail="冰箱不存在或無權限存取"
         )
 
-    return fridge
+    # 返回包含 compartment_mode 的結果
+    return {
+        "id": fridge.id,
+        "user_id": fridge.user_id,
+        "model_name": fridge.model_name,
+        "total_capacity_liters": fridge.total_capacity_liters,
+        "created_at": fridge.created_at,
+        "updated_at": fridge.updated_at,
+        "compartment_mode": "detailed" if len(fridge.compartments) > 0 else "simple",
+        "compartments": fridge.compartments,
+    }
 
 
 @router.put("/fridges/{id}", response_model=FridgeResponse)
@@ -79,7 +114,17 @@ async def update_fridge(id: int, data: FridgeUpdate, db: DBSession, user_id: Cur
     db.refresh(fridge)
 
     logger.info(f"使用者 {user_id} 更新冰箱 (ID: {fridge.id})")
-    return fridge
+
+    # 返回包含 compartment_mode 的結果
+    return {
+        "id": fridge.id,
+        "user_id": fridge.user_id,
+        "model_name": fridge.model_name,
+        "total_capacity_liters": fridge.total_capacity_liters,
+        "created_at": fridge.created_at,
+        "updated_at": fridge.updated_at,
+        "compartment_mode": "detailed" if len(fridge.compartments) > 0 else "simple",
+    }
 
 
 @router.post("/fridges/{id}/compartments", response_model=FridgeCompartmentResponse, status_code=status.HTTP_201_CREATED)

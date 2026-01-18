@@ -26,6 +26,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Food Items"])
 
 
+def _build_food_item_response(item: FoodItem) -> FoodItemResponse:
+    """將 FoodItem ORM 物件轉換為 FoodItemResponse"""
+    return FoodItemResponse(
+        id=item.id,
+        fridge_id=item.fridge_id,
+        compartment_id=item.compartment_id,
+        compartment=item.compartment.name if item.compartment else None,
+        name=item.name,
+        category=item.category,
+        quantity=item.quantity,
+        unit=item.unit,
+        expiry_date=item.expiry_date,
+        purchase_date=item.purchase_date,
+        price=item.price,
+        volume_liters=item.volume_liters,
+        storage_type=item.storage_type,
+        image_url=item.image_url,
+        cloudinary_public_id=item.cloudinary_public_id,
+        recognized_by_ai=item.recognized_by_ai,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+        is_expired=item.is_expired,
+        days_until_expiry=item.days_until_expiry,
+    )
+
+
 @router.get("/food-items", response_model=list[FoodItemResponse])
 async def list_food_items(
     db: DBSession,
@@ -61,16 +87,7 @@ async def list_food_items(
         food_items = [item for item in food_items if item.is_expired == is_expired]
 
     # 組裝回應（包含計算屬性和分區名稱）
-    results = []
-    for item in food_items:
-        item_dict = FoodItemResponse.model_validate(item).model_dump()
-        item_dict["is_expired"] = item.is_expired
-        item_dict["days_until_expiry"] = item.days_until_expiry
-        # 加入分區名稱（如果有）
-        item_dict["compartment"] = item.compartment.name if item.compartment else None
-        results.append(FoodItemResponse(**item_dict))
-
-    return results
+    return [_build_food_item_response(item) for item in food_items]
 
 
 @router.get("/food-items/{id}", response_model=FoodItemResponse)
@@ -89,14 +106,7 @@ async def get_food_item(id: int, db: DBSession, user_id: CurrentUserId):
             status_code=status.HTTP_404_NOT_FOUND, detail="食材不存在或無權限存取"
         )
 
-    # 組裝回應（包含計算屬性和分區名稱）
-    item_dict = FoodItemResponse.model_validate(food_item).model_dump()
-    item_dict["is_expired"] = food_item.is_expired
-    item_dict["days_until_expiry"] = food_item.days_until_expiry
-    # 加入分區名稱（如果有）
-    item_dict["compartment"] = food_item.compartment.name if food_item.compartment else None
-
-    return FoodItemResponse(**item_dict)
+    return _build_food_item_response(food_item)
 
 
 @router.post("/food-items", response_model=FoodItemResponse, status_code=status.HTTP_201_CREATED)
@@ -120,14 +130,7 @@ async def create_food_item(data: FoodItemCreate, db: DBSession, user_id: Current
 
     logger.info(f"使用者 {user_id} 新增食材: {food_item.name} (ID: {food_item.id})")
 
-    # 組裝回應（包含計算屬性和分區名稱）
-    item_dict = FoodItemResponse.model_validate(food_item).model_dump()
-    item_dict["is_expired"] = food_item.is_expired
-    item_dict["days_until_expiry"] = food_item.days_until_expiry
-    # 加入分區名稱（如果有）
-    item_dict["compartment"] = food_item.compartment.name if food_item.compartment else None
-
-    return FoodItemResponse(**item_dict)
+    return _build_food_item_response(food_item)
 
 
 @router.put("/food-items/{id}", response_model=FoodItemResponse)
@@ -156,14 +159,7 @@ async def update_food_item(id: int, data: FoodItemUpdate, db: DBSession, user_id
 
     logger.info(f"使用者 {user_id} 更新食材: {food_item.name} (ID: {food_item.id})")
 
-    # 組裝回應（包含計算屬性和分區名稱）
-    item_dict = FoodItemResponse.model_validate(food_item).model_dump()
-    item_dict["is_expired"] = food_item.is_expired
-    item_dict["days_until_expiry"] = food_item.days_until_expiry
-    # 加入分區名稱（如果有）
-    item_dict["compartment"] = food_item.compartment.name if food_item.compartment else None
-
-    return FoodItemResponse(**item_dict)
+    return _build_food_item_response(food_item)
 
 
 @router.delete("/food-items/{id}", status_code=status.HTTP_204_NO_CONTENT)

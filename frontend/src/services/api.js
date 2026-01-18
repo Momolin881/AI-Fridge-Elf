@@ -9,16 +9,30 @@ import axios from 'axios';
 import { getLiffAccessToken } from '../liff';
 
 // API 基礎 URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // 建立 Axios 實例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
+
+// 請求攔截器：自動設置 Content-Type（FormData 除外）
+apiClient.interceptors.request.use(
+  (config) => {
+    if (config.data instanceof FormData) {
+      // FormData：刪除預設的 Content-Type，讓瀏覽器自動設置（包含 boundary）
+      delete config.headers['Content-Type'];
+      // 增加上傳超時時間
+      config.timeout = 60000;
+      console.log('📤 FormData request:', config.url);
+    } else {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // 請求攔截器：自動添加 Authorization header
 apiClient.interceptors.request.use(
@@ -49,6 +63,7 @@ apiClient.interceptors.response.use(
     } else if (error.request) {
       // 請求已發送但無回應
       console.error('Network Error:', error.request);
+      console.error('Error details:', error.message, error.code);
     } else {
       // 其他錯誤
       console.error('Error:', error.message);
@@ -122,9 +137,16 @@ export const recognizeFoodImage = (imageFile, fridgeId, storageType, compartment
     formData.append('compartment_id', compartmentId);
   }
 
-  return apiClient.post('/food-items/recognize', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  // Debug logging
+  console.log('🔍 recognizeFoodImage called with:', {
+    imageFile: imageFile ? { name: imageFile.name, size: imageFile.size, type: imageFile.type } : null,
+    fridgeId: validFridgeId,
+    storageType,
+    compartmentId,
   });
+
+  // 不要手動設置 Content-Type，讓瀏覽器自動處理 FormData（會自動加上 boundary）
+  return apiClient.post('/food-items/recognize', formData);
 };
 
 /**

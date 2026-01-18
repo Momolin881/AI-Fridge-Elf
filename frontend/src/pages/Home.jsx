@@ -206,7 +206,7 @@ function Home() {
               <div style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 14, color: '#666' }}>
-                    {fridges[0].name}
+                    {fridges[0].model_name || '我的冰箱'}
                   </span>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <Tag color={fridges[0].compartment_mode === 'detailed' ? 'purple' : 'default'}>

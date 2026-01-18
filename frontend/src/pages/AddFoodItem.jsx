@@ -25,7 +25,7 @@ import {
 } from 'antd';
 import { CameraOutlined, FormOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getFridges, recognizeFoodImage, createFoodItem } from '../services/api';
+import { getFridges, getFridge, recognizeFoodImage, createFoodItem } from '../services/api';
 import { ImageUploader, CompartmentSelector } from '../components';
 
 const { Content } = Layout;
@@ -40,10 +40,18 @@ function AddFoodItem() {
   const [mode, setMode] = useState('ai'); // ai or manual
   const [aiRecognizing, setAiRecognizing] = useState(false);
   const [selectedFridge, setSelectedFridge] = useState(null);
+  const [selectedFridgeDetail, setSelectedFridgeDetail] = useState(null);
 
   useEffect(() => {
     loadFridges();
   }, []);
+
+  // 當選擇冰箱時，載入冰箱詳細資料（含分區）
+  useEffect(() => {
+    if (selectedFridge) {
+      loadFridgeDetail(selectedFridge);
+    }
+  }, [selectedFridge]);
 
   const loadFridges = async () => {
     try {
@@ -61,6 +69,15 @@ function AddFoodItem() {
       message.error('載入冰箱失敗，請稍後再試');
     } finally {
       setFridgeLoading(false);
+    }
+  };
+
+  const loadFridgeDetail = async (fridgeId) => {
+    try {
+      const detail = await getFridge(fridgeId);
+      setSelectedFridgeDetail(detail);
+    } catch (error) {
+      console.error('載入冰箱詳細資料失敗:', error);
     }
   };
 
@@ -121,9 +138,12 @@ function AddFoodItem() {
         recognized_by_ai: values.recognized_by_ai || 0,
       };
 
-      // 修復：移除無效的 compartment_id（如果是字符串或不是數字）
-      if (foodData.compartment_id && typeof foodData.compartment_id !== 'number') {
-        delete foodData.compartment_id;
+      // 修復：確保 compartment_id 是數字類型
+      if (foodData.compartment_id) {
+        foodData.compartment_id = Number(foodData.compartment_id);
+        if (isNaN(foodData.compartment_id)) {
+          delete foodData.compartment_id;
+        }
       }
 
       await createFoodItem(foodData);
@@ -217,22 +237,48 @@ function AddFoodItem() {
               </Form.Item>
             )}
 
-            {/* 儲存類型 */}
-            <Form.Item
-              label="儲存類型"
-              name="storage_type"
-              rules={[{ required: true, message: '請選擇儲存類型' }]}
-            >
-              <Radio.Group>
-                <Radio value="冷藏">冷藏</Radio>
-                <Radio value="冷凍">冷凍</Radio>
-              </Radio.Group>
-            </Form.Item>
+            {/* 分區選擇（僅細分模式顯示） - 放在儲存類型之前 */}
+            {selectedFridgeDetail?.compartment_mode === 'detailed' && (
+              <Form.Item label="分區" name="compartment_id" rules={[{ required: true, message: '請選擇分區' }]}>
+                <CompartmentSelector
+                  mode="detailed"
+                  customCompartments={
+                    selectedFridgeDetail?.compartments?.map((c) => ({
+                      value: c.id,
+                      label: c.name,
+                      parent: c.parent_type,
+                    })) || []
+                  }
+                  onChange={(value) => {
+                    // 選擇分區時，自動設定儲存類型
+                    const compartment = selectedFridgeDetail?.compartments?.find((c) => c.id === value);
+                    if (compartment?.parent_type) {
+                      form.setFieldValue('storage_type', compartment.parent_type);
+                    }
+                  }}
+                />
+              </Form.Item>
+            )}
 
-            {/* 分區選擇（細分模式） */}
-            <Form.Item label="分區（可選）" name="compartment_id">
-              <CompartmentSelector fridgeId={selectedFridge} />
-            </Form.Item>
+            {/* 儲存類型 - 細分模式下隱藏（由分區自動決定） */}
+            {selectedFridgeDetail?.compartment_mode !== 'detailed' && (
+              <Form.Item
+                label="儲存類型"
+                name="storage_type"
+                rules={[{ required: true, message: '請選擇儲存類型' }]}
+              >
+                <Radio.Group>
+                  <Radio value="冷藏">冷藏</Radio>
+                  <Radio value="冷凍">冷凍</Radio>
+                </Radio.Group>
+              </Form.Item>
+            )}
+            {/* 細分模式下的隱藏 storage_type 欄位 */}
+            {selectedFridgeDetail?.compartment_mode === 'detailed' && (
+              <Form.Item name="storage_type" hidden>
+                <Input />
+              </Form.Item>
+            )}
 
             {/* AI 模式：圖片上傳 */}
             {mode === 'ai' && (
