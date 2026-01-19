@@ -361,12 +361,17 @@ function AddFoodItem() {
                   size="large"
                 />
                 <Button
+                  type="primary"
                   size="large"
                   icon={<CalendarOutlined />}
                   onClick={() => setCalendarVisible(true)}
-                  title="查看消費月曆"
                 />
               </Space.Compact>
+              <div style={{ textAlign: 'right', marginTop: 4 }}>
+                <span style={{ fontSize: 12, color: '#1890ff', cursor: 'pointer' }} onClick={() => setCalendarVisible(true)}>
+                  查看/紀錄本月消費紀錄
+                </span>
+              </div>
             </Form.Item>
 
             {/* 隱藏欄位（AI 辨識用） */}

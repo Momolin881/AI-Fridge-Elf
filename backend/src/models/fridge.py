@@ -31,6 +31,8 @@ class Fridge(Base):
     owner = relationship("User", back_populates="fridges")
     compartments = relationship("FridgeCompartment", back_populates="fridge", cascade="all, delete-orphan")
     food_items = relationship("FoodItem", back_populates="fridge", cascade="all, delete-orphan")
+    members = relationship("FridgeMember", back_populates="fridge", cascade="all, delete-orphan")
+    invites = relationship("FridgeInvite", back_populates="fridge", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Fridge(id={self.id}, user_id={self.user_id}, model='{self.model_name}')>"

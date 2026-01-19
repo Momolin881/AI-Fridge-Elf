@@ -41,7 +41,7 @@ const MODE_OPTIONS = [
 function FridgeSetup() {
   const [loading, setLoading] = useState(false);
   const [selectedSize, setSelectedSize] = useState(300); // 預設中型
-  const [selectedMode, setSelectedMode] = useState('simple'); // 預設簡單模式
+  const [selectedMode, setSelectedMode] = useState('detailed'); // 預設細分模式
 
   const handleSubmit = async () => {
     try {

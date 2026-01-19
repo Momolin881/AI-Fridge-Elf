@@ -328,4 +328,77 @@ export const getShoppingSuggestions = () => {
   return apiClient.get('/budget/shopping-suggestions');
 };
 
+// ---------- 冰箱成員相關 ----------
+
+/**
+ * 獲取冰箱成員清單
+ * @param {number} fridgeId - 冰箱 ID
+ * @returns {Promise<Array>} 成員清單
+ */
+export const getFridgeMembers = (fridgeId) => {
+  return apiClient.get(`/fridges/${fridgeId}/members`);
+};
+
+/**
+ * 產生冰箱邀請碼
+ * @param {number} fridgeId - 冰箱 ID
+ * @param {Object} options - 邀請選項 { default_role, expires_days }
+ * @returns {Promise<Object>} 邀請碼資料
+ */
+export const createFridgeInvite = (fridgeId, options = {}) => {
+  return apiClient.post(`/fridges/${fridgeId}/invites`, options);
+};
+
+/**
+ * 透過邀請碼加入冰箱
+ * @param {string} inviteCode - 邀請碼
+ * @returns {Promise<Object>} 加入結果
+ */
+export const joinFridgeByCode = (inviteCode) => {
+  return apiClient.post(`/fridges/join/${inviteCode}`);
+};
+
+/**
+ * 更新成員權限
+ * @param {number} fridgeId - 冰箱 ID
+ * @param {number} memberId - 成員 ID
+ * @param {Object} data - { role: 'editor' | 'viewer' }
+ * @returns {Promise<Object>} 更新後的成員資料
+ */
+export const updateMemberRole = (fridgeId, memberId, data) => {
+  return apiClient.put(`/fridges/${fridgeId}/members/${memberId}`, data);
+};
+
+/**
+ * 移除冰箱成員
+ * @param {number} fridgeId - 冰箱 ID
+ * @param {number} memberId - 成員 ID
+ * @returns {Promise<void>}
+ */
+export const removeMember = (fridgeId, memberId) => {
+  return apiClient.delete(`/fridges/${fridgeId}/members/${memberId}`);
+};
+
+// ---------- 冰箱匯出匯入 ----------
+
+/**
+ * 匯出冰箱資料
+ * @param {number} fridgeId - 冰箱 ID
+ * @returns {Promise<Object>} 匯出的 JSON 資料
+ */
+export const exportFridge = (fridgeId) => {
+  return apiClient.get(`/fridges/${fridgeId}/export`);
+};
+
+/**
+ * 匯入冰箱資料
+ * @param {number} fridgeId - 冰箱 ID
+ * @param {Object} data - 匯入的 JSON 資料
+ * @param {boolean} clearExisting - 是否清除現有食材
+ * @returns {Promise<Object>} 匯入結果
+ */
+export const importFridge = (fridgeId, data, clearExisting = false) => {
+  return apiClient.post(`/fridges/${fridgeId}/import?clear_existing=${clearExisting}`, data);
+};
+
 export default apiClient;

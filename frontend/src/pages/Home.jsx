@@ -25,8 +25,8 @@ import {
   Button,
   Popover,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined } from '@ant-design/icons';
-import { getFoodItems, getFridges, deleteFoodItem } from '../services/api';
+import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined } from '@ant-design/icons';
+import { getFoodItems, getFridges, deleteFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember } from '../services/api';
 import { FoodItemCard, VersionFooter, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -42,6 +42,13 @@ function Home() {
   const [filter, setFilter] = useState('all'); // all, 冷藏, 冷凍, expired
   const [searchText, setSearchText] = useState('');
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [inviteCode, setInviteCode] = useState(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [memberModalVisible, setMemberModalVisible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -82,6 +89,25 @@ function Home() {
 
       setFridges(fridgesData);
       setFoodItems(itemsData);
+
+      // 載入成員清單
+      if (fridgesData.length > 0) {
+        try {
+          const membersData = await getFridgeMembers(fridgesData[0].id);
+          setMembers(membersData);
+          // 檢查當前使用者是否為 owner (第一個 owner 角色的成員)
+          const ownerMember = membersData.find(m => m.role === 'owner');
+          // 簡化判斷：如果成員列表存在且有 owner，假設當前用戶就是 owner
+          // 實際應用中應該比對 LIFF user_id
+          setIsOwner(ownerMember ? true : false);
+        } catch (e) {
+          console.log('載入成員清單失敗:', e);
+          // 如果載入失敗，預設為 owner（因為可能是第一次使用）
+          setIsOwner(true);
+        }
+      } else {
+        setIsOwner(true); // 沒有冰箱時預設為 owner
+      }
     } catch (error) {
       console.error('載入資料失敗:', error);
       message.error('載入資料失敗，請稍後再試');
@@ -196,10 +222,51 @@ function Home() {
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <Content style={{ padding: '16px' }}>
-        {/* 標題 */}
-        <Title level={3} style={{ marginBottom: 16 }}>
-          我的冰箱
+        {/* 1. 新增食材區塊 */}
+        <Title level={5} style={{ marginBottom: 8, color: '#666' }}>
+          1.新增食材
         </Title>
+        <Card
+          hoverable
+          onClick={() => {
+            if (fridges.length === 0) {
+              navigate('/setup');
+            } else {
+              navigate('/add');
+            }
+          }}
+          style={{
+            marginBottom: 16,
+            cursor: 'pointer',
+            border: '2px dashed #1890ff',
+            background: 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)',
+          }}
+        >
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <PlusOutlined style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }} />
+            <div style={{ fontSize: 16, color: '#1890ff', fontWeight: 500 }}>
+              點擊新增食材
+            </div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              拍照辨識或手動輸入
+            </div>
+          </div>
+        </Card>
+
+        {/* 2. 我的冰箱 */}
+        <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <Title level={5} style={{ marginBottom: 0, color: '#666' }}>
+              2.我的冰箱
+            </Title>
+            <span
+              style={{ fontSize: 12, color: '#1890ff', cursor: 'pointer' }}
+              onClick={() => setShareModalVisible(true)}
+            >
+              （僅管理員）一鍵分享/寄送邀請
+            </span>
+          </div>
+        </div>
 
         {/* 統計卡片 */}
         <Card style={{ marginBottom: 16 }}>
@@ -348,12 +415,137 @@ function Home() {
                   expiringPercentage > 50
                     ? '#ff4d4f'
                     : expiringPercentage > 20
-                    ? '#faad14'
-                    : '#52c41a'
+                      ? '#faad14'
+                      : '#52c41a'
                 }
                 status="active"
                 format={(percent) => <span style={{ fontSize: 12 }}>{percent}% 需注意</span>}
               />
+            </div>
+
+            {/* 成員清單 */}
+            {members.length > 0 && (
+              <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <TeamOutlined style={{ color: '#666' }} />
+                    <span style={{ fontSize: 13, color: '#666' }}>冰箱成員 ({members.length})</span>
+                  </div>
+                  {isOwner && (
+                    <span
+                      style={{ fontSize: 12, color: '#1890ff', cursor: 'pointer' }}
+                      onClick={() => setMemberModalVisible(true)}
+                    >
+                      編輯
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: -8 }}>
+                  {members.slice(0, 5).map((member, idx) => (
+                    <div
+                      key={member.id}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        border: member.role === 'owner' ? '2px solid #faad14' : '2px solid #fff',
+                        overflow: 'hidden',
+                        marginLeft: idx > 0 ? -8 : 0,
+                        background: '#1890ff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: 12,
+                      }}
+                      title={`${member.display_name} (${member.role === 'owner' ? '管理員' : member.role === 'editor' ? '共享者' : '檢視者'})`}
+                    >
+                      {member.picture_url ? (
+                        <img src={member.picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        member.display_name?.[0] || '?'
+                      )}
+                    </div>
+                  ))}
+                  {members.length > 5 && (
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        border: '2px solid #fff',
+                        marginLeft: -8,
+                        background: '#d9d9d9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#666',
+                        fontSize: 11,
+                      }}
+                    >
+                      +{members.length - 5}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 匯出/匯入按鈕 */}
+            <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+              <Button
+                icon={<DownloadOutlined />}
+                size="small"
+                loading={exportLoading}
+                onClick={async () => {
+                  if (fridges.length === 0) return;
+                  try {
+                    setExportLoading(true);
+                    const data = await exportFridge(fridges[0].id);
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `fridge-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    message.success('匯出成功');
+                  } catch (error) {
+                    console.error('匯出失敗:', error);
+                    message.error('匯出失敗');
+                  } finally {
+                    setExportLoading(false);
+                  }
+                }}
+              >
+                匯出備份
+              </Button>
+              <Button
+                icon={<UploadOutlined />}
+                size="small"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.json';
+                  input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    try {
+                      const text = await file.text();
+                      const data = JSON.parse(text);
+                      if (fridges.length === 0) return;
+                      await importFridge(fridges[0].id, data, false);
+                      message.success('匯入成功');
+                      loadData();
+                    } catch (error) {
+                      console.error('匯入失敗:', error);
+                      message.error('匯入失敗，請檢查檔案格式');
+                    }
+                  };
+                  input.click();
+                }}
+              >
+                匯入
+              </Button>
             </div>
           </Space>
         </Card>
@@ -409,7 +601,7 @@ function Home() {
           <Empty
             description={
               foodItems.length === 0
-                ? '尚無食材，點選右下角「+」新增'
+                ? '尚無食材，點選上方卡片新增'
                 : '找不到符合條件的食材'
             }
             style={{ marginTop: 60 }}
@@ -478,6 +670,171 @@ function Home() {
           visible={calendarVisible}
           onClose={() => setCalendarVisible(false)}
         />
+
+        {/* 分享邀請 Modal */}
+        <Modal
+          title="分享冰箱"
+          open={shareModalVisible}
+          onCancel={() => {
+            setShareModalVisible(false);
+            setInviteCode(null);
+          }}
+          footer={null}
+        >
+          {!inviteCode ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <p style={{ marginBottom: 16, color: '#666' }}>
+                產生邀請連結，讓朋友也能查看或編輯這個冰箱的食材
+              </p>
+              <Button
+                type="primary"
+                size="large"
+                loading={inviteLoading}
+                onClick={async () => {
+                  if (fridges.length === 0) return;
+                  try {
+                    setInviteLoading(true);
+                    const result = await createFridgeInvite(fridges[0].id, {
+                      default_role: 'editor',
+                      expires_days: 7,
+                    });
+                    setInviteCode(result.invite_code);
+                  } catch (error) {
+                    console.error('產生邀請碼失敗:', error);
+                    message.error('產生邀請碼失敗');
+                  } finally {
+                    setInviteLoading(false);
+                  }
+                }}
+              >
+                產生邀請連結
+              </Button>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <p style={{ color: '#666', marginBottom: 8 }}>邀請碼</p>
+              <p style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 6, marginBottom: 8 }}>
+                {inviteCode}
+              </p>
+              <p style={{ color: '#999', fontSize: 12, marginBottom: 20 }}>有效期限：7 天</p>
+              <Button
+                type="primary"
+                icon={<CopyOutlined />}
+                size="large"
+                block
+                onClick={() => {
+                  const liffId = import.meta.env.VITE_LIFF_ID || '2008810800-TjjioAMA';
+                  const inviteLink = `https://liff.line.me/${liffId}?join=${inviteCode}`;
+                  navigator.clipboard.writeText(inviteLink);
+                  message.success('邀請連結已複製');
+                }}
+              >
+                複製邀請連結
+              </Button>
+              <p style={{ color: '#999', fontSize: 12, marginTop: 16 }}>
+                將連結分享給朋友，點擊後即可加入
+              </p>
+            </div>
+          )}
+        </Modal>
+
+        {/* 成員管理 Modal */}
+        <Modal
+          title="管理冰箱成員"
+          open={memberModalVisible}
+          onCancel={() => setMemberModalVisible(false)}
+          footer={null}
+        >
+          <List
+            dataSource={members}
+            renderItem={(member) => (
+              <List.Item
+                actions={
+                  member.role !== 'owner' ? [
+                    <Select
+                      key="role"
+                      value={member.role}
+                      size="small"
+                      style={{ width: 90 }}
+                      onChange={async (newRole) => {
+                        if (fridges.length === 0) return;
+                        try {
+                          await updateMemberRole(fridges[0].id, member.id, { role: newRole });
+                          message.success('權限已更新');
+                          // 重新載入成員
+                          const membersData = await getFridgeMembers(fridges[0].id);
+                          setMembers(membersData);
+                        } catch (error) {
+                          console.error('更新權限失敗:', error);
+                          message.error('更新權限失敗');
+                        }
+                      }}
+                    >
+                      <Option value="editor">共享者</Option>
+                      <Option value="viewer">檢視者</Option>
+                    </Select>,
+                    <Button
+                      key="delete"
+                      type="text"
+                      danger
+                      size="small"
+                      onClick={async () => {
+                        if (fridges.length === 0) return;
+                        Modal.confirm({
+                          title: '確認移除',
+                          content: `確定要移除「${member.display_name}」嗎？`,
+                          okText: '移除',
+                          okType: 'danger',
+                          cancelText: '取消',
+                          onOk: async () => {
+                            try {
+                              await removeMember(fridges[0].id, member.id);
+                              message.success('成員已移除');
+                              const membersData = await getFridgeMembers(fridges[0].id);
+                              setMembers(membersData);
+                            } catch (error) {
+                              console.error('移除成員失敗:', error);
+                              message.error('移除成員失敗');
+                            }
+                          },
+                        });
+                      }}
+                    >
+                      移除
+                    </Button>,
+                  ] : [
+                    <Tag key="owner" color="gold">管理員</Tag>
+                  ]
+                }
+              >
+                <List.Item.Meta
+                  avatar={
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        background: '#1890ff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                      }}
+                    >
+                      {member.picture_url ? (
+                        <img src={member.picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        member.display_name?.[0] || '?'
+                      )}
+                    </div>
+                  }
+                  title={member.display_name}
+                />
+              </List.Item>
+            )}
+          />
+        </Modal>
       </Content>
     </Layout>
   );

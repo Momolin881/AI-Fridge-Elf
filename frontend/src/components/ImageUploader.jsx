@@ -113,25 +113,25 @@ const ImageUploader = ({
             style={{
               border: '2px dashed #d9d9d9',
               borderRadius: '8px',
-              padding: '40px',
+              padding: '16px',
               textAlign: 'center',
               cursor: 'pointer',
               backgroundColor: '#fafafa',
             }}
           >
-            <p style={{ fontSize: '48px', margin: 0 }}>📸</p>
-            <p style={{ marginTop: '10px', color: '#666' }}>
+            <p style={{ fontSize: '28px', margin: 0 }}>📸</p>
+            <p style={{ marginTop: '6px', color: '#666', fontSize: '14px' }}>
               點擊選擇圖片或拍照
             </p>
-            <div style={{ marginTop: '10px' }}>
-              <Button icon={<CameraOutlined />} style={{ marginRight: '10px' }}>
+            <div style={{ marginTop: '8px' }}>
+              <Button icon={<CameraOutlined />} size="small" style={{ marginRight: '8px' }}>
                 拍照
               </Button>
-              <Button icon={<PictureOutlined />}>
+              <Button icon={<PictureOutlined />} size="small">
                 選擇照片
               </Button>
             </div>
-            <p style={{ marginTop: '10px', fontSize: '12px', color: '#999' }}>
+            <p style={{ marginTop: '6px', fontSize: '11px', color: '#999' }}>
               支援 JPG、PNG 格式，大小不超過 {maxSize}MB
             </p>
           </div>
