@@ -85,6 +85,22 @@ function AddFoodItem() {
   const handleImageUpload = async (file) => {
     const fridgeId = form.getFieldValue('fridge_id') || selectedFridge;
     const storageType = form.getFieldValue('storage_type');
+    const compartmentId = form.getFieldValue('compartment_id');
+
+    // Debug logging
+    console.log('🔍 handleImageUpload called:', {
+      fridgeId,
+      selectedFridge,
+      storageType,
+      compartmentId,
+      compartmentMode: selectedFridgeDetail?.compartment_mode,
+    });
+
+    // 細分模式下，檢查是否選擇了分區
+    if (selectedFridgeDetail?.compartment_mode === 'detailed' && !compartmentId) {
+      message.warning('請先選擇分區');
+      return;
+    }
 
     // 嚴格驗證 fridgeId（確保是有效數字）
     const validFridgeId = Number(fridgeId);
@@ -105,7 +121,7 @@ function AddFoodItem() {
       // 呼叫 AI 辨識 API（使用已驗證的數字）
       const result = await recognizeFoodImage(file, validFridgeId, storageType);
 
-      message.success({ content: result.confidence, key: 'ai-recognition' });
+      message.success({ content: `辨識成功: ${result.name}`, key: 'ai-recognition' });
 
       // 自動填入表單
       form.setFieldsValue({
