@@ -22,13 +22,15 @@ import {
   Statistic,
   Modal,
   Tag,
+  Button,
+  Popover,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined } from '@ant-design/icons';
 import { getFoodItems, getFridges, deleteFoodItem } from '../services/api';
-import { FoodItemCard, VersionFooter } from '../components';
+import { FoodItemCard, VersionFooter, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 function Home() {
@@ -39,6 +41,7 @@ function Home() {
   const [fridges, setFridges] = useState([]);
   const [filter, setFilter] = useState('all'); // all, 冷藏, 冷凍, expired
   const [searchText, setSearchText] = useState('');
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -130,8 +133,8 @@ function Home() {
     ? Math.round(((stats.expired + stats.expiringSoon) / stats.total) * 100)
     : 0;
 
-  // 分區排序順序
-  const compartmentOrder = ['冷藏上層', '冷藏中層', '冷藏下層', '冷凍上層', '冷凍下層'];
+  // 分區排序順序（新版 3 分區）
+  const compartmentOrder = ['冷藏上層', '冷藏下層', '冷凍'];
 
   // 分組和排序食材
   const groupedItems = () => {
@@ -222,13 +225,123 @@ function Home() {
               <Statistic title="🧊 冷藏" value={stats.冷藏} suffix="項" />
               <Statistic title="❄️ 冷凍" value={stats.冷凍} suffix="項" />
             </div>
+            {/* 即將過期 / 已過期 - 大字體可點擊區塊 */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              {/* 即將過期 */}
+              <Popover
+                title={<span style={{ fontSize: 16 }}><ClockCircleOutlined /> 即將過期食材</span>}
+                trigger="click"
+                placement="bottom"
+                content={
+                  <div style={{ maxHeight: 300, overflow: 'auto', minWidth: 200 }}>
+                    {foodItems
+                      .filter((item) => !item.is_expired && item.days_until_expiry !== null && item.days_until_expiry <= 3)
+                      .length === 0 ? (
+                      <Text type="secondary">目前沒有即將過期的食材</Text>
+                    ) : (
+                      <List
+                        size="small"
+                        dataSource={foodItems.filter(
+                          (item) => !item.is_expired && item.days_until_expiry !== null && item.days_until_expiry <= 3
+                        )}
+                        renderItem={(item) => (
+                          <List.Item
+                            style={{ cursor: 'pointer', padding: '8px 4px' }}
+                            onClick={() => navigate(`/edit/${item.id}`)}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <div>
+                                <Text strong style={{ fontSize: 15 }}>{item.name}</Text>
+                                <Tag color="orange" style={{ marginLeft: 8 }}>
+                                  {item.days_until_expiry === 0 ? '今天' : `${item.days_until_expiry} 天`}
+                                </Tag>
+                              </div>
+                              <RightOutlined style={{ color: '#999' }} />
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    )}
+                  </div>
+                }
+              >
+                <Card
+                  hoverable
+                  size="small"
+                  style={{
+                    flex: 1,
+                    background: stats.expiringSoon > 0 ? 'linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)' : '#fafafa',
+                    borderColor: stats.expiringSoon > 0 ? '#ffc53d' : '#d9d9d9',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ textAlign: 'center' }}>
+                    <ClockCircleOutlined style={{ fontSize: 24, color: '#faad14', marginBottom: 4 }} />
+                    <div style={{ fontSize: 24, fontWeight: 'bold', color: stats.expiringSoon > 0 ? '#d48806' : '#999' }}>
+                      {stats.expiringSoon}
+                    </div>
+                    <div style={{ fontSize: 14, color: '#666' }}>即將過期</div>
+                  </div>
+                </Card>
+              </Popover>
+
+              {/* 已過期 */}
+              <Popover
+                title={<span style={{ fontSize: 16 }}><WarningOutlined style={{ color: '#ff4d4f' }} /> 已過期食材</span>}
+                trigger="click"
+                placement="bottom"
+                content={
+                  <div style={{ maxHeight: 300, overflow: 'auto', minWidth: 200 }}>
+                    {foodItems.filter((item) => item.is_expired).length === 0 ? (
+                      <Text type="secondary">目前沒有過期的食材</Text>
+                    ) : (
+                      <List
+                        size="small"
+                        dataSource={foodItems.filter((item) => item.is_expired)}
+                        renderItem={(item) => (
+                          <List.Item
+                            style={{ cursor: 'pointer', padding: '8px 4px' }}
+                            onClick={() => navigate(`/edit/${item.id}`)}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <div>
+                                <Text strong style={{ fontSize: 15 }}>{item.name}</Text>
+                                <Tag color="red" style={{ marginLeft: 8 }}>
+                                  過期 {Math.abs(item.days_until_expiry)} 天
+                                </Tag>
+                              </div>
+                              <RightOutlined style={{ color: '#999' }} />
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    )}
+                  </div>
+                }
+              >
+                <Card
+                  hoverable
+                  size="small"
+                  style={{
+                    flex: 1,
+                    background: stats.expired > 0 ? 'linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%)' : '#fafafa',
+                    borderColor: stats.expired > 0 ? '#ff7875' : '#d9d9d9',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ textAlign: 'center' }}>
+                    <WarningOutlined style={{ fontSize: 24, color: '#ff4d4f', marginBottom: 4 }} />
+                    <div style={{ fontSize: 24, fontWeight: 'bold', color: stats.expired > 0 ? '#cf1322' : '#999' }}>
+                      {stats.expired}
+                    </div>
+                    <div style={{ fontSize: 14, color: '#666' }}>已過期</div>
+                  </div>
+                </Card>
+              </Popover>
+            </div>
+
+            {/* 風險進度條 */}
             <div>
-              <div style={{ marginBottom: 8 }}>
-                <span>即將過期: {stats.expiringSoon} 項</span>
-                <span style={{ marginLeft: 16, color: '#ff4d4f' }}>
-                  已過期: {stats.expired} 項
-                </span>
-              </div>
               <Progress
                 percent={expiringPercentage}
                 strokeColor={
@@ -239,10 +352,29 @@ function Home() {
                     : '#52c41a'
                 }
                 status="active"
+                format={(percent) => <span style={{ fontSize: 12 }}>{percent}% 需注意</span>}
               />
             </div>
           </Space>
         </Card>
+
+        {/* 消費日曆按鈕 */}
+        <Button
+          type="primary"
+          icon={<CalendarOutlined />}
+          onClick={() => setCalendarVisible(true)}
+          style={{
+            width: '100%',
+            marginBottom: 16,
+            height: 44,
+            fontSize: 16,
+            background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+            border: 'none',
+            boxShadow: '0 2px 8px rgba(82, 196, 26, 0.3)',
+          }}
+        >
+          查看消費月曆
+        </Button>
 
         {/* 篩選和搜尋 */}
         <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }} size="middle">
@@ -340,6 +472,12 @@ function Home() {
 
         {/* 版本資訊 */}
         <VersionFooter />
+
+        {/* 消費月曆 Modal */}
+        <ExpenseCalendarModal
+          visible={calendarVisible}
+          onClose={() => setCalendarVisible(false)}
+        />
       </Content>
     </Layout>
   );

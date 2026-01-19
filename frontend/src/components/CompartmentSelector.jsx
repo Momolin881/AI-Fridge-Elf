@@ -49,13 +49,10 @@ const CompartmentSelector = ({
   const detailedOptions = customCompartments.length > 0
     ? customCompartments
     : [
-        // 預設細分選項（如果沒有自訂）
+        // 預設細分選項（3 分區）
         { value: '冷藏上層', label: '冷藏上層', parent: '冷藏' },
-        { value: '冷藏中層', label: '冷藏中層', parent: '冷藏' },
         { value: '冷藏下層', label: '冷藏下層', parent: '冷藏' },
-        { value: '冷藏門架', label: '冷藏門架', parent: '冷藏' },
-        { value: '冷凍上層', label: '冷凍上層', parent: '冷凍' },
-        { value: '冷凍下層', label: '冷凍下層', parent: '冷凍' },
+        { value: '冷凍', label: '冷凍', parent: '冷凍' },
       ];
 
   // 按父類別分組（冷藏 vs 冷凍）

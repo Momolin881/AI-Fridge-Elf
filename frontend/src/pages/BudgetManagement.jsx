@@ -2,6 +2,7 @@
  * 預算控管頁面
  *
  * 顯示消費統計、預算設定、採買建議等功能。
+ * 新增：月曆視圖顯示每日消費記錄
  */
 
 import { useState, useEffect } from 'react';
@@ -24,6 +25,9 @@ import {
   Tag,
   Tabs,
   Alert,
+  Modal,
+  Calendar,
+  Badge,
 } from 'antd';
 import {
   DollarOutlined,
@@ -32,6 +36,7 @@ import {
   ArrowLeftOutlined,
   PieChartOutlined,
   LineChartOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { Line, Pie } from 'react-chartjs-2';
 import {
@@ -45,11 +50,13 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import dayjs from 'dayjs';
 import {
   getSpendingStats,
   getBudgetSettings,
   updateBudgetSettings,
   getShoppingSuggestions,
+  getFoodItems,
 } from '../services/api';
 
 // 註冊 Chart.js 組件
@@ -76,6 +83,13 @@ function BudgetManagement() {
   const [suggestions, setSuggestions] = useState([]);
   const [period, setPeriod] = useState('month');
 
+  // 月曆相關狀態
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [foodItems, setFoodItems] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [dailyItems, setDailyItems] = useState([]);
+  const [calendarMonth, setCalendarMonth] = useState(dayjs());
+
   useEffect(() => {
     loadData();
   }, [period]);
@@ -83,15 +97,17 @@ function BudgetManagement() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, settingsData, suggestionsData] = await Promise.all([
+      const [statsData, settingsData, suggestionsData, itemsData] = await Promise.all([
         getSpendingStats(period),
         getBudgetSettings(),
         getShoppingSuggestions(),
+        getFoodItems(),
       ]);
 
       setStats(statsData);
       setSettings(settingsData);
       setSuggestions(suggestionsData);
+      setFoodItems(itemsData.filter((item) => item.price && item.price > 0));
 
       // 設定表單初始值
       form.setFieldsValue({
@@ -118,6 +134,72 @@ function BudgetManagement() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // 計算每日消費總額
+  const getDailySpending = () => {
+    const dailyMap = {};
+    foodItems.forEach((item) => {
+      if (item.purchase_date && item.price) {
+        const dateKey = dayjs(item.purchase_date).format('YYYY-MM-DD');
+        if (!dailyMap[dateKey]) {
+          dailyMap[dateKey] = 0;
+        }
+        dailyMap[dateKey] += item.price;
+      }
+    });
+    return dailyMap;
+  };
+
+  // 日曆單元格渲染
+  const dateCellRender = (value) => {
+    const dateKey = value.format('YYYY-MM-DD');
+    const dailySpending = getDailySpending();
+    const amount = dailySpending[dateKey];
+
+    if (amount) {
+      return (
+        <div style={{ textAlign: 'center' }}>
+          <Badge
+            count={`$${amount}`}
+            style={{
+              backgroundColor: '#52c41a',
+              fontSize: '10px',
+              padding: '0 4px',
+            }}
+          />
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // 點擊日期
+  const handleDateSelect = (date) => {
+    const dateKey = date.format('YYYY-MM-DD');
+    const items = foodItems.filter(
+      (item) => dayjs(item.purchase_date).format('YYYY-MM-DD') === dateKey
+    );
+    setSelectedDate(date);
+    setDailyItems(items);
+  };
+
+  // 計算選中日期的總消費
+  const selectedDateTotal = dailyItems.reduce((sum, item) => sum + (item.price || 0), 0);
+
+  // 計算指定月份的消費總額
+  const getMonthlyTotal = (month) => {
+    const monthKey = month.format('YYYY-MM');
+    return foodItems
+      .filter((item) => dayjs(item.purchase_date).format('YYYY-MM') === monthKey)
+      .reduce((sum, item) => sum + (item.price || 0), 0);
+  };
+
+  // 處理月曆月份切換
+  const handlePanelChange = (date) => {
+    setCalendarMonth(date);
+    setSelectedDate(null);
+    setDailyItems([]);
   };
 
   // 消費趨勢圖表數據
@@ -215,13 +297,95 @@ function BudgetManagement() {
         >
           返回
         </Button>
-        <Title level={2} style={{ margin: 0 }}>
-          <DollarOutlined /> 預算控管
-        </Title>
-        <Paragraph type="secondary" style={{ marginTop: '8px' }}>
-          管理您的食材採購預算和消費分析
-        </Paragraph>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <Title level={2} style={{ margin: 0 }}>
+              <DollarOutlined /> 預算控管
+            </Title>
+            <Paragraph type="secondary" style={{ marginTop: '8px', marginBottom: 0 }}>
+              管理您的食材採購預算和消費分析
+            </Paragraph>
+          </div>
+          <Button
+            type="primary"
+            icon={<CalendarOutlined />}
+            onClick={() => setCalendarVisible(true)}
+          >
+            查看月曆
+          </Button>
+        </div>
       </div>
+
+      {/* 月曆 Modal */}
+      <Modal
+        title={<><CalendarOutlined /> 消費月曆</>}
+        open={calendarVisible}
+        onCancel={() => {
+          setCalendarVisible(false);
+          setSelectedDate(null);
+          setDailyItems([]);
+        }}
+        footer={null}
+        width={800}
+      >
+        {/* 月份消費總計 */}
+        <Card
+          size="small"
+          style={{ marginBottom: 16, background: '#f6ffed', borderColor: '#b7eb8f' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text strong style={{ fontSize: 16 }}>
+              {calendarMonth.format('YYYY 年 M 月')} 總消費
+            </Text>
+            <Text strong style={{ fontSize: 20, color: '#52c41a' }}>
+              NT$ {getMonthlyTotal(calendarMonth).toLocaleString()}
+            </Text>
+          </div>
+        </Card>
+
+        <Calendar
+          fullscreen={false}
+          cellRender={dateCellRender}
+          onSelect={handleDateSelect}
+          onPanelChange={handlePanelChange}
+        />
+
+        {/* 當日消費明細 */}
+        {selectedDate && (
+          <Card
+            size="small"
+            title={`${selectedDate.format('YYYY/MM/DD')} 消費明細`}
+            style={{ marginTop: 16 }}
+          >
+            {dailyItems.length === 0 ? (
+              <Text type="secondary">當日無消費記錄</Text>
+            ) : (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <Text strong style={{ fontSize: 16, color: '#52c41a' }}>
+                    支出：NT$ {selectedDateTotal.toLocaleString()}
+                  </Text>
+                </div>
+                <List
+                  size="small"
+                  dataSource={dailyItems}
+                  renderItem={(item) => (
+                    <List.Item>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Space>
+                          <Text>{item.name}</Text>
+                          {item.category && <Tag>{item.category}</Tag>}
+                        </Space>
+                        <Text strong>NT$ {item.price?.toLocaleString()}</Text>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              </>
+            )}
+          </Card>
+        )}
+      </Modal>
 
       {/* 期間選擇 */}
       <Tabs

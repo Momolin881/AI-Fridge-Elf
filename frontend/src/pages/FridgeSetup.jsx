@@ -1,68 +1,73 @@
 /**
- * 冰箱初始化頁面
+ * 冰箱初始化頁面（簡化版）
  *
- * 首次使用時引導使用者設定冰箱資訊。
- * 支援簡單模式（冷藏/冷凍）和細分模式（自訂分區）。
+ * 快速設定：選擇大小 → 選擇模式 → 開始使用
  */
 
 import { useState } from 'react';
-import {
-  Layout,
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Radio,
-  Button,
-  message,
-  Typography,
-  Space,
-  Divider,
-} from 'antd';
+import { Layout, Card, Button, message, Typography, Space } from 'antd';
 import { createFridge, createCompartment } from '../services/api';
 
 const { Content } = Layout;
-const { Title, Paragraph } = Typography;
+const { Title, Text } = Typography;
+
+// 冰箱大小選項
+const FRIDGE_SIZES = [
+  { value: 150, label: '小型', description: '~150 公升', emoji: '🧊' },
+  { value: 300, label: '中型', description: '~300 公升', emoji: '🧊🧊' },
+  { value: 500, label: '大型', description: '~500 公升', emoji: '🧊🧊🧊' },
+];
+
+// 分區模式選項
+const MODE_OPTIONS = [
+  {
+    value: 'simple',
+    label: '簡單模式',
+    description: '只分冷藏 / 冷凍',
+    compartments: [],
+  },
+  {
+    value: 'detailed',
+    label: '細分模式',
+    description: '冷藏上層 / 冷藏下層 / 冷凍',
+    compartments: [
+      { name: '冷藏上層', parent_type: '冷藏' },
+      { name: '冷藏下層', parent_type: '冷藏' },
+      { name: '冷凍', parent_type: '冷凍' },
+    ],
+  },
+];
 
 function FridgeSetup() {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('simple'); // simple or detailed
+  const [selectedSize, setSelectedSize] = useState(300); // 預設中型
+  const [selectedMode, setSelectedMode] = useState('simple'); // 預設簡單模式
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async () => {
     try {
       setLoading(true);
 
       // 建立冰箱
-      const fridgeData = {
-        model_name: values.model_name || null,
-        total_capacity_liters: values.total_capacity_liters,
-      };
+      const fridge = await createFridge({
+        model_name: null,
+        total_capacity_liters: selectedSize,
+      });
 
-      const fridge = await createFridge(fridgeData);
-
-      // 如果是細分模式，建立預設分區
-      if (mode === 'detailed') {
-        const defaultCompartments = [
-          { name: '冷藏上層', parent_type: '冷藏', capacity_liters: null },
-          { name: '冷藏中層', parent_type: '冷藏', capacity_liters: null },
-          { name: '冷藏下層', parent_type: '冷藏', capacity_liters: null },
-          { name: '冷凍上層', parent_type: '冷凍', capacity_liters: null },
-          { name: '冷凍下層', parent_type: '冷凍', capacity_liters: null },
-        ];
-
-        // 批次建立分區
+      // 如果是細分模式，建立分區
+      if (selectedMode === 'detailed') {
+        const modeConfig = MODE_OPTIONS.find((m) => m.value === 'detailed');
         await Promise.all(
-          defaultCompartments.map((comp) => createCompartment(fridge.id, comp))
+          modeConfig.compartments.map((comp) =>
+            createCompartment(fridge.id, { ...comp, capacity_liters: null })
+          )
         );
       }
 
-      message.success('冰箱設定完成！');
-      // 強制重新載入頁面，讓 App.jsx 重新檢查冰箱狀態
+      message.success('設定完成！開始使用吧 🎉');
       window.location.href = '/';
     } catch (error) {
       console.error('建立冰箱失敗:', error);
-      message.error('建立冰箱失敗，請稍後再試');
+      message.error('建立失敗，請稍後再試');
     } finally {
       setLoading(false);
     }
@@ -70,117 +75,118 @@ function FridgeSetup() {
 
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <Content style={{ padding: '24px' }}>
+      <Content style={{ padding: '24px', maxWidth: 480, margin: '0 auto' }}>
         <Card>
-          <Title level={3}>歡迎使用 AI Fridge Elf</Title>
-          <Paragraph type="secondary">
-            讓我們先設定你的冰箱資訊，以便更精準地管理食材。
-          </Paragraph>
+          <Title level={3} style={{ marginBottom: 8 }}>
+            歡迎使用 AI Fridge Elf 🧝
+          </Title>
+          <Text type="secondary">快速設定你的冰箱，3 秒開始追蹤食材</Text>
 
-          <Divider />
+          {/* 冰箱大小選擇 */}
+          <div style={{ marginTop: 32 }}>
+            <Text strong style={{ fontSize: 16 }}>
+              你的冰箱大小？
+            </Text>
+            <Space
+              direction="vertical"
+              style={{ width: '100%', marginTop: 12 }}
+              size="middle"
+            >
+              {FRIDGE_SIZES.map((size) => (
+                <Card
+                  key={size.value}
+                  size="small"
+                  hoverable
+                  onClick={() => setSelectedSize(size.value)}
+                  style={{
+                    cursor: 'pointer',
+                    borderColor: selectedSize === size.value ? '#1890ff' : '#d9d9d9',
+                    borderWidth: selectedSize === size.value ? 2 : 1,
+                    background: selectedSize === size.value ? '#e6f7ff' : '#fff',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <Text strong style={{ fontSize: 16 }}>
+                        {size.emoji} {size.label}
+                      </Text>
+                      <Text type="secondary" style={{ marginLeft: 8 }}>
+                        {size.description}
+                      </Text>
+                    </div>
+                    {selectedSize === size.value && (
+                      <Text type="primary" strong>
+                        ✓
+                      </Text>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </Space>
+          </div>
 
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSubmit}
-            initialValues={{
-              total_capacity_liters: 300,
-              mode: 'simple',
-            }}
+          {/* 分區模式選擇 */}
+          <div style={{ marginTop: 32 }}>
+            <Text strong style={{ fontSize: 16 }}>
+              分區方式？
+            </Text>
+            <Space
+              direction="vertical"
+              style={{ width: '100%', marginTop: 12 }}
+              size="middle"
+            >
+              {MODE_OPTIONS.map((mode) => (
+                <Card
+                  key={mode.value}
+                  size="small"
+                  hoverable
+                  onClick={() => setSelectedMode(mode.value)}
+                  style={{
+                    cursor: 'pointer',
+                    borderColor: selectedMode === mode.value ? '#1890ff' : '#d9d9d9',
+                    borderWidth: selectedMode === mode.value ? 2 : 1,
+                    background: selectedMode === mode.value ? '#e6f7ff' : '#fff',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <Text strong style={{ fontSize: 16 }}>
+                        {mode.label}
+                      </Text>
+                      <br />
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        {mode.description}
+                      </Text>
+                    </div>
+                    {selectedMode === mode.value && (
+                      <Text type="primary" strong>
+                        ✓
+                      </Text>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </Space>
+          </div>
+
+          {/* 開始使用按鈕 */}
+          <Button
+            type="primary"
+            size="large"
+            block
+            loading={loading}
+            onClick={handleSubmit}
+            style={{ marginTop: 32, height: 48 }}
           >
-            {/* 冰箱型號 */}
-            <Form.Item
-              label="冰箱型號（可選）"
-              name="model_name"
-              help="例如：Samsung 雙門冰箱、Panasonic 三門冰箱"
-            >
-              <Input placeholder="請輸入冰箱型號" size="large" />
-            </Form.Item>
+            開始使用
+          </Button>
 
-            {/* 總容量 */}
-            <Form.Item
-              label="總容量（公升）"
-              name="total_capacity_liters"
-              rules={[
-                { required: true, message: '請輸入總容量' },
-                { type: 'number', min: 1, message: '容量必須大於 0' },
-              ]}
-              help="可參考冰箱說明書，或估算一個大約值"
-            >
-              <InputNumber
-                placeholder="例如：300"
-                style={{ width: '100%' }}
-                size="large"
-                addonAfter="公升"
-              />
-            </Form.Item>
-
-            {/* 分區模式 */}
-            <Form.Item
-              label="分區模式"
-              name="mode"
-              help="簡單模式：只區分冷藏和冷凍 | 細分模式：可自訂多個分區（如上層、中層、下層）"
-            >
-              <Radio.Group
-                onChange={(e) => setMode(e.target.value)}
-                value={mode}
-                size="large"
-                style={{ width: '100%' }}
-              >
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Radio value="simple">
-                    <div>
-                      <div style={{ fontWeight: 500 }}>簡單模式</div>
-                      <div style={{ fontSize: 12, color: '#999' }}>
-                        適合小型冰箱或不需細分的使用者
-                      </div>
-                    </div>
-                  </Radio>
-                  <Radio value="detailed">
-                    <div>
-                      <div style={{ fontWeight: 500 }}>細分模式</div>
-                      <div style={{ fontSize: 12, color: '#999' }}>
-                        自動建立 5 個預設分區（冷藏上/中/下層、冷凍上/下層）
-                      </div>
-                    </div>
-                  </Radio>
-                </Space>
-              </Radio.Group>
-            </Form.Item>
-
-            {/* 細分模式預覽 */}
-            {mode === 'detailed' && (
-              <Card
-                size="small"
-                title="📋 將自動建立以下分區"
-                style={{ marginBottom: 16, background: '#f0f5ff', borderColor: '#adc6ff' }}
-              >
-                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                  <div>🧊 <strong>冷藏上層</strong></div>
-                  <div>🧊 <strong>冷藏中層</strong></div>
-                  <div>🧊 <strong>冷藏下層</strong></div>
-                  <div>❄️ <strong>冷凍上層</strong></div>
-                  <div>❄️ <strong>冷凍下層</strong></div>
-                </Space>
-                <Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0, fontSize: 12 }}>
-                  完成設定後，您可以在新增食材時選擇這些分區
-                </Paragraph>
-              </Card>
-            )}
-
-            {/* 提交按鈕 */}
-            <Form.Item style={{ marginTop: 32 }}>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                size="large"
-                block
-              >
-                完成設定
-              </Button>
-            </Form.Item>
-          </Form>
+          <Text
+            type="secondary"
+            style={{ display: 'block', textAlign: 'center', marginTop: 16, fontSize: 12 }}
+          >
+            之後可在設定中調整
+          </Text>
         </Card>
       </Content>
     </Layout>

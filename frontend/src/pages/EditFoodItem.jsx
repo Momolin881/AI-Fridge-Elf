@@ -22,10 +22,10 @@ import {
   Popconfirm,
   Image,
 } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getFoodItem, updateFoodItem, deleteFoodItem } from '../services/api';
-import { CompartmentSelector } from '../components';
+import { CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -38,6 +38,7 @@ function EditFoodItem() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [foodItem, setFoodItem] = useState(null);
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   useEffect(() => {
     loadFoodItem();
@@ -185,13 +186,20 @@ function EditFoodItem() {
             </Form.Item>
 
             <Form.Item label="價格（台幣）" name="price">
-              <InputNumber
-                min={0}
-                placeholder="選填"
-                style={{ width: '100%' }}
-                size="large"
-                addonAfter="元"
-              />
+              <Space.Compact style={{ width: '100%' }}>
+                <InputNumber
+                  min={0}
+                  placeholder="選填"
+                  style={{ width: '100%' }}
+                  size="large"
+                />
+                <Button
+                  size="large"
+                  icon={<CalendarOutlined />}
+                  onClick={() => setCalendarVisible(true)}
+                  title="查看消費月曆"
+                />
+              </Space.Compact>
             </Form.Item>
 
             {/* 儲存類型 */}
@@ -251,6 +259,12 @@ function EditFoodItem() {
             </Form.Item>
           </Form>
         </Card>
+
+        {/* 消費月曆 Modal */}
+        <ExpenseCalendarModal
+          visible={calendarVisible}
+          onClose={() => setCalendarVisible(false)}
+        />
       </Content>
     </Layout>
   );

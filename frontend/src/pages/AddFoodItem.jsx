@@ -23,10 +23,10 @@ import {
   Divider,
   Spin,
 } from 'antd';
-import { CameraOutlined, FormOutlined } from '@ant-design/icons';
+import { CameraOutlined, FormOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getFridges, getFridge, recognizeFoodImage, createFoodItem } from '../services/api';
-import { ImageUploader, CompartmentSelector } from '../components';
+import { ImageUploader, CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -41,6 +41,7 @@ function AddFoodItem() {
   const [aiRecognizing, setAiRecognizing] = useState(false);
   const [selectedFridge, setSelectedFridge] = useState(null);
   const [selectedFridgeDetail, setSelectedFridgeDetail] = useState(null);
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   useEffect(() => {
     loadFridges();
@@ -336,13 +337,20 @@ function AddFoodItem() {
             </Form.Item>
 
             <Form.Item label="價格（台幣）" name="price">
-              <InputNumber
-                min={0}
-                placeholder="選填"
-                style={{ width: '100%' }}
-                size="large"
-                addonAfter="元"
-              />
+              <Space.Compact style={{ width: '100%' }}>
+                <InputNumber
+                  min={0}
+                  placeholder="選填"
+                  style={{ width: '100%' }}
+                  size="large"
+                />
+                <Button
+                  size="large"
+                  icon={<CalendarOutlined />}
+                  onClick={() => setCalendarVisible(true)}
+                  title="查看消費月曆"
+                />
+              </Space.Compact>
             </Form.Item>
 
             {/* 隱藏欄位（AI 辨識用） */}
@@ -375,6 +383,12 @@ function AddFoodItem() {
             </Form.Item>
           </Form>
         </Card>
+
+        {/* 消費月曆 Modal */}
+        <ExpenseCalendarModal
+          visible={calendarVisible}
+          onClose={() => setCalendarVisible(false)}
+        />
       </Content>
     </Layout>
   );
