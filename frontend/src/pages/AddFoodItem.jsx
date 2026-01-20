@@ -96,18 +96,15 @@ function AddFoodItem() {
       compartmentMode: selectedFridgeDetail?.compartment_mode,
     });
 
-    // 細分模式下，檢查是否選擇了分區
-    if (selectedFridgeDetail?.compartment_mode === 'detailed' && !compartmentId) {
-      message.warning('請先選擇分區');
-      return;
-    }
+    // 注意：儲存類型和分區都移到儲存時檢查，允許先拍照辨識
+    // 簡單模式和細分模式都使用「冷藏」作為 AI 辨識時的預設值
 
     // 嚴格驗證 fridgeId（確保是有效數字）
     const validFridgeId = Number(fridgeId);
-    if (!storageType) {
-      message.warning('請先選擇儲存類型');
-      return;
-    }
+
+    // AI 辨識時使用預設 storage_type（稍後儲存時可以更改）
+    const effectiveStorageType = storageType || '冷藏';
+
     if (!fridgeId || isNaN(validFridgeId) || validFridgeId <= 0) {
       message.warning('請先選擇冰箱');
       console.error('❌ Invalid fridge_id:', { fridgeId, selectedFridge, formValue: form.getFieldValue('fridge_id') });
@@ -119,7 +116,7 @@ function AddFoodItem() {
       message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
 
       // 呼叫 AI 辨識 API（使用已驗證的數字）
-      const result = await recognizeFoodImage(file, validFridgeId, storageType);
+      const result = await recognizeFoodImage(file, validFridgeId, effectiveStorageType);
 
       message.success({ content: `辨識成功: ${result.name}`, key: 'ai-recognition' });
 
@@ -160,6 +157,12 @@ function AddFoodItem() {
         foodData.compartment_id = Number(foodData.compartment_id);
         if (isNaN(foodData.compartment_id)) {
           delete foodData.compartment_id;
+        } else {
+          // 細分模式：根據分區自動設定 storage_type
+          const selectedCompartment = selectedFridgeDetail?.compartments?.find(c => c.id === foodData.compartment_id);
+          if (selectedCompartment?.parent_type) {
+            foodData.storage_type = selectedCompartment.parent_type;
+          }
         }
       }
 
