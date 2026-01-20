@@ -96,14 +96,14 @@ def check_expiring_items():
                 # 計算提醒日期
                 warning_date = datetime.utcnow().date() + timedelta(days=settings.expiry_warning_days)
 
-                # 查詢該使用者即將過期的食材
+                # 查詢該使用者即將過期或已過期的食材
                 expiring_items = db.query(FoodItem).join(
                     Fridge, FoodItem.fridge_id == Fridge.id
                 ).filter(
                     Fridge.user_id == settings.user_id,
                     FoodItem.expiry_date.isnot(None),
                     FoodItem.expiry_date <= warning_date,
-                    FoodItem.expiry_date >= datetime.utcnow().date()
+                    FoodItem.status == 'active'  # 只查詢未處理的食材
                 ).all()
 
                 if expiring_items:

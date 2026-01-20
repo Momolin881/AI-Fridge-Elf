@@ -122,7 +122,17 @@ def send_expiry_notification(user_id: str, items: list[dict]) -> bool:
     item_contents = []
     for item in items[:5]:  # 最多顯示 5 個
         days = item.get("days_remaining", 0)
-        days_text = f"今天到期" if days == 0 else f"{days} 天後到期"
+        
+        # 根據天數決定顯示文字和顏色
+        if days < 0:
+            days_text = f"已過期 {abs(days)} 天"
+            color = "#ff0000"  # 紅色
+        elif days == 0:
+            days_text = "今天到期"
+            color = "#ff0000"  # 紅色
+        else:
+            days_text = f"{days} 天後到期"
+            color = "#ff9900"  # 橙色
 
         item_contents.append({
             "type": "box",
@@ -139,7 +149,7 @@ def send_expiry_notification(user_id: str, items: list[dict]) -> bool:
                     "type": "text",
                     "text": days_text,
                     "size": "sm",
-                    "color": "#ff0000" if days == 0 else "#ff9900",
+                    "color": color,
                     "align": "end",
                     "flex": 1
                 }
@@ -162,7 +172,7 @@ def send_expiry_notification(user_id: str, items: list[dict]) -> bool:
                 },
                 {
                     "type": "text",
-                    "text": f"您有 {len(items)} 項食材即將過期",
+                    "text": f"您有 {len(items)} 項食材需要注意",
                     "size": "sm",
                     "color": "#999999",
                     "margin": "md"
