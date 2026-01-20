@@ -78,11 +78,23 @@ class FoodItemResponse(FoodItemBase):
     created_at: datetime
     updated_at: datetime
 
+    # 狀態（封存/已處理）
+    status: str = 'active'  # active / archived
+    archived_at: Optional[datetime] = None
+    archived_by: Optional[int] = None
+
     # 計算屬性（由後端填入）
     is_expired: bool = False
     days_until_expiry: Optional[int] = None
 
     model_config = {"from_attributes": True}
+
+
+class FoodItemArchive(BaseModel):
+    """封存食材請求"""
+
+    # 目前不需要額外參數，未來可擴展 reason 欄位
+    pass
 
 
 class AIRecognitionRequest(BaseModel):

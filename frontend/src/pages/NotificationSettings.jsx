@@ -17,18 +17,17 @@ import {
   message,
   Spin,
   Typography,
-  Space,
-  Divider
+  Space
 } from 'antd';
 import {
   BellOutlined,
   ClockCircleOutlined,
-  InboxOutlined,
-  WarningOutlined,
-  ArrowLeftOutlined
+  DollarOutlined,
+  ArrowLeftOutlined,
+  SendOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getNotificationSettings, updateNotificationSettings } from '../services/api';
+import { getNotificationSettings, updateNotificationSettings, testExpiryNotification } from '../services/api';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -37,6 +36,7 @@ function NotificationSettings() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -48,13 +48,13 @@ function NotificationSettings() {
       const settings = await getNotificationSettings();
 
       // 轉換資料格式以符合表單
+      // budget_warning 暫存於 localStorage（後端尚未支援）
+      const budgetSettings = JSON.parse(localStorage.getItem('budgetWarningSettings') || '{}');
       form.setFieldsValue({
         expiry_warning_enabled: settings.expiry_warning_enabled,
         expiry_warning_days: settings.expiry_warning_days,
-        low_stock_enabled: settings.low_stock_enabled,
-        low_stock_threshold: settings.low_stock_threshold,
-        space_warning_enabled: settings.space_warning_enabled,
-        space_warning_threshold: settings.space_warning_threshold,
+        budget_warning_enabled: budgetSettings.enabled || false,
+        budget_warning_amount: budgetSettings.amount || 5000,
         notification_time: settings.notification_time ? dayjs(settings.notification_time, 'HH:mm') : dayjs('09:00', 'HH:mm')
       });
 
@@ -70,14 +70,16 @@ function NotificationSettings() {
     try {
       setSubmitting(true);
 
-      // 轉換資料格式
+      // 儲存 budget_warning 到 localStorage（後端尚未支援）
+      localStorage.setItem('budgetWarningSettings', JSON.stringify({
+        enabled: values.budget_warning_enabled,
+        amount: values.budget_warning_amount
+      }));
+
+      // 轉換資料格式（只送後端支援的欄位）
       const settings = {
         expiry_warning_enabled: values.expiry_warning_enabled,
         expiry_warning_days: values.expiry_warning_days,
-        low_stock_enabled: values.low_stock_enabled,
-        low_stock_threshold: values.low_stock_threshold,
-        space_warning_enabled: values.space_warning_enabled,
-        space_warning_threshold: values.space_warning_threshold,
         notification_time: values.notification_time.format('HH:mm')
       };
 
@@ -89,6 +91,23 @@ function NotificationSettings() {
       message.error('儲存設定失敗，請稍後再試');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      setTesting(true);
+      await testExpiryNotification();
+      message.success('測試通知已發送，請查看 LINE 訊息');
+    } catch (error) {
+      console.error('發送測試通知失敗:', error);
+      if (error.response?.status === 401) {
+        message.error('請先在 LINE 內重新開啟應用');
+      } else {
+        message.error('發送測試通知失敗：' + (error.response?.data?.detail || '請稍後再試'));
+      }
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -133,10 +152,8 @@ function NotificationSettings() {
         initialValues={{
           expiry_warning_enabled: true,
           expiry_warning_days: 3,
-          low_stock_enabled: false,
-          low_stock_threshold: 1,
-          space_warning_enabled: true,
-          space_warning_threshold: 80,
+          budget_warning_enabled: false,
+          budget_warning_amount: 5000,
           notification_time: dayjs('09:00', 'HH:mm')
         }}
       >
@@ -183,11 +200,17 @@ function NotificationSettings() {
                     min={1}
                     max={30}
                     marks={{
-                      1: '1天',
-                      7: '7天',
-                      14: '14天',
+                      1: '1',
+                      2: '2',
+                      3: '3',
+                      4: '4',
+                      5: '5',
+                      6: '6',
+                      7: '7',
+                      14: '14',
                       30: '30天'
                     }}
+                    step={null}
                     tooltip={{ formatter: (value) => `${value} 天` }}
                   />
                 </Form.Item>
@@ -196,27 +219,27 @@ function NotificationSettings() {
           </Form.Item>
         </Card>
 
-        {/* 庫存提醒設定 */}
+        {/* 月消費金額提醒 */}
         <Card
           title={
             <Space>
-              <InboxOutlined style={{ color: '#1890ff' }} />
-              <span>庫存提醒</span>
+              <DollarOutlined style={{ color: '#52c41a' }} />
+              <span>月消費金額提醒</span>
             </Space>
           }
           style={{ marginBottom: '16px' }}
         >
           <Form.Item
-            name="low_stock_enabled"
+            name="budget_warning_enabled"
             valuePropName="checked"
             style={{ marginBottom: '16px' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <Text strong>啟用庫存提醒</Text>
+                <Text strong>啟用消費提醒</Text>
                 <br />
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  當食材數量低於門檻時通知您
+                  當月消費超過設定金額時通知您
                 </Text>
               </div>
               <Switch />
@@ -226,77 +249,24 @@ function NotificationSettings() {
           <Form.Item
             noStyle
             shouldUpdate={(prevValues, currentValues) =>
-              prevValues.low_stock_enabled !== currentValues.low_stock_enabled
+              prevValues.budget_warning_enabled !== currentValues.budget_warning_enabled
             }
           >
             {({ getFieldValue }) =>
-              getFieldValue('low_stock_enabled') ? (
+              getFieldValue('budget_warning_enabled') ? (
                 <Form.Item
-                  name="low_stock_threshold"
-                  label="庫存門檻"
-                  help="當食材數量低於此值時發送提醒"
+                  name="budget_warning_amount"
+                  label="月消費上限"
+                  help="當月消費超過此金額時發送提醒"
                 >
                   <InputNumber
                     min={0}
-                    max={100}
+                    max={100000}
+                    step={500}
                     style={{ width: '100%' }}
-                    addonAfter="個"
-                  />
-                </Form.Item>
-              ) : null
-            }
-          </Form.Item>
-        </Card>
-
-        {/* 空間提醒設定 */}
-        <Card
-          title={
-            <Space>
-              <WarningOutlined style={{ color: '#ff4d4f' }} />
-              <span>空間提醒</span>
-            </Space>
-          }
-          style={{ marginBottom: '16px' }}
-        >
-          <Form.Item
-            name="space_warning_enabled"
-            valuePropName="checked"
-            style={{ marginBottom: '16px' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <Text strong>啟用空間提醒</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  當冰箱空間使用率過高時通知您
-                </Text>
-              </div>
-              <Switch />
-            </div>
-          </Form.Item>
-
-          <Form.Item
-            noStyle
-            shouldUpdate={(prevValues, currentValues) =>
-              prevValues.space_warning_enabled !== currentValues.space_warning_enabled
-            }
-          >
-            {({ getFieldValue }) =>
-              getFieldValue('space_warning_enabled') ? (
-                <Form.Item
-                  name="space_warning_threshold"
-                  label="空間使用率門檻"
-                >
-                  <Slider
-                    min={50}
-                    max={100}
-                    marks={{
-                      50: '50%',
-                      65: '65%',
-                      80: '80%',
-                      100: '100%'
-                    }}
-                    tooltip={{ formatter: (value) => `${value}%` }}
+                    addonBefore="NT$"
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
                   />
                 </Form.Item>
               ) : null
@@ -327,6 +297,29 @@ function NotificationSettings() {
               minuteStep={15}
             />
           </Form.Item>
+        </Card>
+
+        {/* 測試通知按鈕 */}
+        <Card
+          title={
+            <Space>
+              <SendOutlined style={{ color: '#1890ff' }} />
+              <span>測試通知</span>
+            </Space>
+          }
+          style={{ marginBottom: '24px' }}
+        >
+          <Paragraph type="secondary" style={{ marginBottom: '16px' }}>
+            點擊下方按鈕立即發送一則測試通知到您的 LINE，確認通知功能正常運作。
+          </Paragraph>
+          <Button
+            icon={<SendOutlined />}
+            onClick={handleTestNotification}
+            loading={testing}
+            block
+          >
+            發送測試通知
+          </Button>
         </Card>
 
         {/* 儲存按鈕 */}

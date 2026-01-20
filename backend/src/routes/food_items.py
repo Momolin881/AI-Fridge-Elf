@@ -5,6 +5,7 @@
 """
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
@@ -47,6 +48,9 @@ def _build_food_item_response(item: FoodItem) -> FoodItemResponse:
         recognized_by_ai=item.recognized_by_ai,
         created_at=item.created_at,
         updated_at=item.updated_at,
+        status=item.status or 'active',
+        archived_at=item.archived_at,
+        archived_by=item.archived_by,
         is_expired=item.is_expired,
         days_until_expiry=item.days_until_expiry,
     )
@@ -58,6 +62,7 @@ async def list_food_items(
     user_id: CurrentUserId,
     compartment: Optional[str] = None,
     is_expired: Optional[bool] = None,
+    status: Optional[str] = 'active',  # active / archived / all
 ):
     """
     列出使用者的所有食材
@@ -65,6 +70,7 @@ async def list_food_items(
     Query 參數:
     - compartment: 篩選分區（如「冷藏」、「冷凍」或分區名稱）
     - is_expired: 篩選是否過期（true/false）
+    - status: 篩選狀態（active: 進行中, archived: 已處理, all: 全部）
     """
     # 查詢使用者的所有食材
     query = (
@@ -72,6 +78,10 @@ async def list_food_items(
         .join(Fridge, FoodItem.fridge_id == Fridge.id)
         .filter(Fridge.user_id == user_id)
     )
+
+    # 篩選狀態
+    if status and status != 'all':
+        query = query.filter(FoodItem.status == status)
 
     # 篩選條件
     if compartment:
@@ -190,6 +200,45 @@ async def delete_food_item(id: int, db: DBSession, user_id: CurrentUserId):
     db.commit()
 
     logger.info(f"使用者 {user_id} 刪除食材: {food_item.name} (ID: {food_item.id})")
+
+
+@router.post("/food-items/{id}/archive", response_model=FoodItemResponse)
+async def archive_food_item(id: int, db: DBSession, user_id: CurrentUserId):
+    """
+    封存食材（標記為已處理）
+
+    將食材從冰箱清單移除，進入「已處理」歷史紀錄。
+    記錄處理時間和處理人。
+    """
+    # 查詢食材
+    food_item = (
+        db.query(FoodItem)
+        .join(Fridge, FoodItem.fridge_id == Fridge.id)
+        .filter(FoodItem.id == id, Fridge.user_id == user_id)
+        .first()
+    )
+
+    if not food_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="食材不存在或無權限存取"
+        )
+
+    if food_item.status == 'archived':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="此食材已被處理"
+        )
+
+    # 更新狀態
+    food_item.status = 'archived'
+    food_item.archived_at = datetime.utcnow()
+    food_item.archived_by = user_id
+
+    db.commit()
+    db.refresh(food_item)
+
+    logger.info(f"使用者 {user_id} 封存食材: {food_item.name} (ID: {food_item.id})")
+
+    return _build_food_item_response(food_item)
 
 
 @router.post("/food-items/recognize", response_model=AIRecognitionResponse)

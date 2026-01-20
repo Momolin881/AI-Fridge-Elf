@@ -178,6 +178,15 @@ export const deleteFoodItem = (itemId) => {
 };
 
 /**
+ * 封存食材（標記為已處理）
+ * @param {number} itemId - 食材 ID
+ * @returns {Promise<Object>} 封存後的食材
+ */
+export const archiveFoodItem = (itemId) => {
+  return apiClient.post(`/food-items/${itemId}/archive`);
+};
+
+/**
  * 批次刪除食材
  * @param {Array<number>} itemIds - 食材 ID 陣列
  * @returns {Promise<void>}
@@ -251,6 +260,14 @@ export const getNotificationSettings = () => {
  */
 export const updateNotificationSettings = (settings) => {
   return apiClient.put('/notifications/settings', settings);
+};
+
+/**
+ * 測試效期提醒通知（手動觸發）
+ * @returns {Promise<Object>} 執行結果
+ */
+export const testExpiryNotification = () => {
+  return apiClient.post('/notifications/test-expiry-check');
 };
 
 // ---------- 食譜相關 ----------

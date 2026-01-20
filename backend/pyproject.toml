@@ -32,6 +32,7 @@ dependencies = [
     "openai>=1.6.0",
     "cloudinary>=1.36.0",
     "apscheduler>=3.10.0",
+    "httpx>=0.25.0",
     "python-dotenv>=1.0.0",
     "python-multipart>=0.0.6",
     "tenacity>=8.2.0",

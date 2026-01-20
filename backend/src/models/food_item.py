@@ -47,6 +47,11 @@ class FoodItem(Base):
     # AI 辨識相關
     recognized_by_ai = Column(Integer, default=0, nullable=False)  # 是否由 AI 辨識（0: 手動, 1: AI）
 
+    # 狀態（用於封存/已處理功能）
+    status = Column(String(20), default='active', nullable=False, index=True)  # active / archived
+    archived_at = Column(DateTime, nullable=True)  # 封存時間
+    archived_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 封存者
+
     # 時間戳記
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

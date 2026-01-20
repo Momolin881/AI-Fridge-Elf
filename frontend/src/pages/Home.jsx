@@ -25,7 +25,7 @@ import {
   Button,
   Popover,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined } from '@ant-design/icons';
 import { getFoodItems, getFridges, deleteFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember } from '../services/api';
 import { FoodItemCard, VersionFooter, ExpenseCalendarModal } from '../components';
 
@@ -39,7 +39,7 @@ function Home() {
   const [foodItems, setFoodItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [fridges, setFridges] = useState([]);
-  const [filter, setFilter] = useState('all'); // all, 冷藏, 冷凍, expired
+  const [filter, setFilter] = useState('all'); // all, 冷藏, 冷凍, expired, archived
   const [searchText, setSearchText] = useState('');
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
@@ -52,13 +52,13 @@ function Home() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filter]);
 
   useEffect(() => {
     // 套用篩選和搜尋
     let result = foodItems;
 
-    // 篩選類型
+    // 篩選類型（archived 的資料已經在 loadData 中處理過了）
     if (filter === '冷藏') {
       result = result.filter((item) => item.storage_type === '冷藏');
     } else if (filter === '冷凍') {
@@ -66,6 +66,7 @@ function Home() {
     } else if (filter === 'expired') {
       result = result.filter((item) => item.is_expired);
     }
+    // filter === 'archived' 或 'all' 時不做額外篩選
 
     // 搜尋
     if (searchText) {
@@ -81,10 +82,13 @@ function Home() {
     try {
       setLoading(true);
 
+      // 根據篩選器決定要載入的狀態
+      const statusParam = filter === 'archived' ? 'archived' : 'active';
+
       // 載入冰箱和食材
       const [fridgesData, itemsData] = await Promise.all([
         getFridges(),
-        getFoodItems(),
+        getFoodItems({ status: statusParam }),
       ]);
 
       setFridges(fridgesData);
@@ -254,18 +258,17 @@ function Home() {
         </Card>
 
         {/* 2. 我的冰箱 */}
-        <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div>
-            <Title level={5} style={{ marginBottom: 0, color: '#666' }}>
-              2.我的冰箱
-            </Title>
-            <span
-              style={{ fontSize: 12, color: '#1890ff', cursor: 'pointer' }}
-              onClick={() => setShareModalVisible(true)}
-            >
-              （僅管理員）一鍵分享/寄送邀請
-            </span>
-          </div>
+        <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={5} style={{ marginBottom: 0, color: '#666' }}>
+            2.我的冰箱
+          </Title>
+          <Button
+            type="link"
+            style={{ fontSize: 14, padding: 0 }}
+            onClick={() => setShareModalVisible(true)}
+          >
+            （僅管理員）一鍵分享/寄送邀請
+          </Button>
         </div>
 
         {/* 統計卡片 */}
@@ -490,11 +493,22 @@ function Home() {
               </div>
             )}
 
-            {/* 匯出/匯入按鈕 */}
-            <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+            {/* 功能按鈕 */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+              <Button
+                icon={<SettingOutlined />}
+                onClick={() => navigate('/settings')}
+              >
+                冰箱設定
+              </Button>
+              <Button
+                icon={<BellOutlined />}
+                onClick={() => navigate('/settings/notifications')}
+              >
+                通知設定
+              </Button>
               <Button
                 icon={<DownloadOutlined />}
-                size="small"
                 loading={exportLoading}
                 onClick={async () => {
                   if (fridges.length === 0) return;
@@ -517,11 +531,10 @@ function Home() {
                   }
                 }}
               >
-                匯出備份
+                匯出
               </Button>
               <Button
                 icon={<UploadOutlined />}
-                size="small"
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
@@ -580,6 +593,7 @@ function Home() {
             <Option value="冷藏">冷藏</Option>
             <Option value="冷凍">冷凍</Option>
             <Option value="expired">已過期</Option>
+            <Option value="archived">📦 已處理（歷史）</Option>
           </Select>
 
           <Input
