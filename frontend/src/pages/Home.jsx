@@ -411,7 +411,7 @@ function Home() {
             </div>
 
             {/* 引導文字 */}
-            {(expiredItems.length > 0 || expiringItems.length > 0) && (
+            {(stats.expired > 0 || stats.expiringSoon > 0) && (
               <div style={{
                 background: '#fff7e6',
                 border: '1px solid #ffd591',
