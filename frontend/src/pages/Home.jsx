@@ -25,7 +25,7 @@ import {
   Button,
   Popover,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined, BulbOutlined } from '@ant-design/icons';
 import { getFoodItems, getFridges, deleteFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember } from '../services/api';
 import { FoodItemCard, VersionFooter, ExpenseCalendarModal } from '../components';
 
@@ -556,6 +556,12 @@ function Home() {
                 }}
               >
                 匯入
+              </Button>
+              <Button
+                icon={<BulbOutlined />}
+                onClick={() => navigate('/recipes/recommendations')}
+              >
+                食譜推薦
               </Button>
             </div>
           </Space>
