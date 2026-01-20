@@ -10,7 +10,7 @@ import { Modal, Calendar, Card, Badge, List, Tag, Typography, Spin, InputNumber,
 import { CalendarOutlined, EditOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PropTypes from 'prop-types';
-import { getFoodItems } from '../services/api';
+import { getFoodItems, getNotificationSettings, updateNotificationSettings } from '../services/api';
 
 const { Text } = Typography;
 const BUDGET_STORAGE_KEY = 'fridge-elf-monthly-budget';
@@ -25,17 +25,27 @@ function ExpenseCalendarModal({ visible, onClose }) {
   const [editingBudget, setEditingBudget] = useState(false);
   const [tempBudget, setTempBudget] = useState(0);
 
-  // 載入預算設定
-  useEffect(() => {
-    const savedBudget = localStorage.getItem(BUDGET_STORAGE_KEY);
-    if (savedBudget) {
-      setMonthlyBudget(Number(savedBudget));
+  // 載入預算設定（從通知設定 API）
+  const loadBudgetFromSettings = async () => {
+    try {
+      const settings = await getNotificationSettings();
+      if (settings?.budget_warning_amount) {
+        setMonthlyBudget(settings.budget_warning_amount);
+      }
+    } catch (error) {
+      console.error('載入預算設定失敗:', error);
+      // 失敗時嘗試從 localStorage 讀取（向下相容）
+      const savedBudget = localStorage.getItem(BUDGET_STORAGE_KEY);
+      if (savedBudget) {
+        setMonthlyBudget(Number(savedBudget));
+      }
     }
-  }, []);
+  };
 
   useEffect(() => {
     if (visible) {
       loadFoodItems();
+      loadBudgetFromSettings();
     }
   }, [visible]);
 
@@ -132,11 +142,24 @@ function ExpenseCalendarModal({ visible, onClose }) {
     setEditingBudget(true);
   };
 
-  // 儲存預算
-  const saveBudget = () => {
-    setMonthlyBudget(tempBudget);
-    localStorage.setItem(BUDGET_STORAGE_KEY, String(tempBudget));
-    setEditingBudget(false);
+  // 儲存預算（到通知設定 API）
+  const saveBudget = async () => {
+    try {
+      setMonthlyBudget(tempBudget);
+      setEditingBudget(false);
+
+      // 同步到通知設定 API
+      await updateNotificationSettings({
+        budget_warning_amount: tempBudget,
+      });
+
+      // 也存到 localStorage 作為備份
+      localStorage.setItem(BUDGET_STORAGE_KEY, String(tempBudget));
+    } catch (error) {
+      console.error('儲存預算設定失敗:', error);
+      // 即使 API 失敗也存到 localStorage
+      localStorage.setItem(BUDGET_STORAGE_KEY, String(tempBudget));
+    }
   };
 
   // 計算預算使用百分比
