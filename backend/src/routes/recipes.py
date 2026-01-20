@@ -34,7 +34,7 @@ router = APIRouter(prefix="/recipes", tags=["recipes"])
 async def get_recipe_recommendations(
     request: RecipeRecommendationRequest,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """
     根據現有食材推薦食譜
@@ -55,7 +55,7 @@ async def get_recipe_recommendations(
     """
     try:
         # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -65,7 +65,7 @@ async def get_recipe_recommendations(
         # 呼叫服務層推薦食譜
         recommendations = RecipeService.recommend_recipes_by_ingredients(
             db=db,
-            user_id=user.id,
+            user_id=user_id,
             item_ids=request.item_ids if request.item_ids else None
         )
 
@@ -89,7 +89,7 @@ async def get_recipe_recommendations(
 )
 async def get_user_recipes(
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
     category: Optional[str] = Query(None, description="類別篩選：favorites, pro, 常煮")
 ):
     """
@@ -105,7 +105,7 @@ async def get_user_recipes(
     """
     try:
         # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -115,7 +115,7 @@ async def get_user_recipes(
         # 獲取使用者食譜
         user_recipes = RecipeService.get_user_recipes(
             db=db,
-            user_id=user.id,
+            user_id=user_id,
             category=category
         )
 
@@ -141,7 +141,7 @@ async def get_user_recipes(
 async def create_user_recipe(
     recipe_data: dict,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
     category: str = Query("favorites", description="分類：favorites, pro, 常煮")
 ):
     """
@@ -155,7 +155,7 @@ async def create_user_recipe(
     """
     try:
         # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -172,7 +172,7 @@ async def create_user_recipe(
         # 新增到收藏
         user_recipe = RecipeService.add_to_favorites(
             db=db,
-            user_id=user.id,
+            user_id=user_id,
             recipe_data=recipe_data,
             category=category
         )
@@ -198,7 +198,7 @@ async def create_user_recipe(
 async def delete_user_recipe(
     user_recipe_id: int,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """
     刪除使用者食譜
@@ -210,7 +210,7 @@ async def delete_user_recipe(
     """
     try:
         # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -220,7 +220,7 @@ async def delete_user_recipe(
         # 刪除使用者食譜
         success = RecipeService.delete_user_recipe(
             db=db,
-            user_id=user.id,
+            user_id=user_id,
             user_recipe_id=user_recipe_id
         )
 

@@ -137,15 +137,15 @@ def require_fridge_permission(db: Session, fridge_id: int, user_id: int, require
 async def get_fridge_members(
     fridge_id: int,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """取得冰箱的所有成員（需為成員才能查看）"""
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
     # 檢查權限（viewer 也可以查看成員）
-    require_fridge_permission(db, fridge_id, user.id, "viewer")
+    require_fridge_permission(db, fridge_id, user_id, "viewer")
     
     # 取得所有成員
     members = db.query(FridgeMember).filter(
@@ -179,15 +179,15 @@ async def update_member_role(
     member_id: int,
     update_data: FridgeMemberUpdate,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """更新成員權限（僅 owner 可操作）"""
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
     # 檢查是否為 owner
-    require_fridge_permission(db, fridge_id, user.id, "owner")
+    require_fridge_permission(db, fridge_id, user_id, "owner")
     
     # 取得要更新的成員
     member = db.query(FridgeMember).filter(
@@ -230,15 +230,15 @@ async def remove_member(
     fridge_id: int,
     member_id: int,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """移除成員（僅 owner 可操作）"""
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
     # 檢查是否為 owner
-    require_fridge_permission(db, fridge_id, user.id, "owner")
+    require_fridge_permission(db, fridge_id, user_id, "owner")
     
     # 取得要移除的成員
     member = db.query(FridgeMember).filter(
@@ -271,15 +271,15 @@ async def create_invite(
     fridge_id: int,
     invite_data: FridgeInviteCreate,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """產生冰箱邀請碼（僅 owner 可操作）"""
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
     # 檢查是否為 owner
-    require_fridge_permission(db, fridge_id, user.id, "owner")
+    require_fridge_permission(db, fridge_id, user_id, "owner")
     
     # 驗證角色值
     if invite_data.default_role not in ["editor", "viewer"]:
@@ -288,7 +288,7 @@ async def create_invite(
     # 建立邀請碼
     invite = FridgeInvite.create_invite(
         fridge_id=fridge_id,
-        created_by=user.id,
+        created_by=user_id,
         default_role=invite_data.default_role,
         expires_days=invite_data.expires_days,
         max_uses=invite_data.max_uses,
@@ -319,15 +319,15 @@ async def create_invite(
 async def get_invites(
     fridge_id: int,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """取得冰箱的所有邀請碼（僅 owner 可查看）"""
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
     # 檢查是否為 owner
-    require_fridge_permission(db, fridge_id, user.id, "owner")
+    require_fridge_permission(db, fridge_id, user_id, "owner")
     
     invites = db.query(FridgeInvite).filter(
         FridgeInvite.fridge_id == fridge_id
@@ -355,10 +355,10 @@ async def get_invites(
 async def join_fridge(
     invite_code: str,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """透過邀請碼加入冰箱"""
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
@@ -374,14 +374,14 @@ async def join_fridge(
         raise HTTPException(status_code=400, detail="邀請碼已過期或已達使用上限")
     
     # 檢查是否已經是成員
-    existing = get_user_membership(db, invite.fridge_id, user.id)
+    existing = get_user_membership(db, invite.fridge_id, user_id)
     if existing:
         raise HTTPException(status_code=400, detail="您已經是此冰箱的成員")
     
     # 加入冰箱
     member = FridgeMember(
         fridge_id=invite.fridge_id,
-        user_id=user.id,
+        user_id=user_id,
         role=invite.default_role,
         invited_by=invite.created_by,
     )
@@ -393,7 +393,7 @@ async def join_fridge(
     
     db.commit()
     
-    logger.info(f"使用者 {user.id} 透過邀請碼 {invite_code} 加入冰箱 {invite.fridge_id}")
+    logger.info(f"使用者 {user_id} 透過邀請碼 {invite_code} 加入冰箱 {invite.fridge_id}")
     
     return JoinFridgeResponse(
         message="成功加入冰箱",

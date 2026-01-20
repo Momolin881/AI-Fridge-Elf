@@ -68,7 +68,7 @@ class ImportOptions(BaseModel):
 async def export_fridge(
     fridge_id: int,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
 ):
     """
     匯出冰箱資料為 JSON 格式
@@ -76,12 +76,12 @@ async def export_fridge(
     包含：冰箱設定、分區、所有食材
     權限：viewer, editor, owner 皆可匯出
     """
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
     # 檢查權限（viewer 也可以匯出）
-    require_fridge_permission(db, fridge_id, user.id, "viewer")
+    require_fridge_permission(db, fridge_id, user_id, "viewer")
     
     # 取得冰箱
     fridge = db.query(Fridge).filter(Fridge.id == fridge_id).first()
@@ -147,7 +147,7 @@ async def import_fridge(
     fridge_id: int,
     import_data: FridgeExportData,
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
     clear_existing: bool = False,
 ):
     """
@@ -158,12 +158,12 @@ async def import_fridge(
     
     權限：editor, owner 可匯入
     """
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
     
     # 檢查權限（需要 editor 以上）
-    require_fridge_permission(db, fridge_id, user.id, "editor")
+    require_fridge_permission(db, fridge_id, user_id, "editor")
     
     # 取得冰箱
     fridge = db.query(Fridge).filter(Fridge.id == fridge_id).first()

@@ -27,7 +27,7 @@ router = APIRouter(tags=["Budget"])
 @router.get("/budget/stats", response_model=SpendingStatsResponse)
 async def get_spending_stats(
     db: DBSession,
-    line_user_id: CurrentUserId,
+    user_id: CurrentUserId,
     period: str = Query('month', pattern='^(month|year)$', description="統計期間（month 或 year）")
 ):
     """
@@ -43,29 +43,20 @@ async def get_spending_stats(
     Args:
         period: 統計期間（'month' 或 'year'）
         db: 資料庫 session
-        line_user_id: LINE User ID（從 token 解析）
+        user_id: 使用者 ID（從 token 解析）
 
     Returns:
         SpendingStatsResponse: 消費統計資料
 
     Raises:
-        HTTPException 404: 使用者不存在
         HTTPException 400: 參數錯誤
         HTTPException 500: 伺服器內部錯誤
     """
     try:
-        # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="使用者不存在"
-            )
-
         # 獲取消費統計
-        stats = BudgetService.get_spending_stats(db, user.id, period=period)
+        stats = BudgetService.get_spending_stats(db, user_id, period=period)
 
-        logger.info(f"使用者 {user.id} 獲取 {period} 消費統計: 總消費 {stats.total_spending}")
+        logger.info(f"使用者 {user_id} 獲取 {period} 消費統計: 總消費 {stats.total_spending}")
         return stats
 
     except HTTPException:
@@ -88,7 +79,7 @@ async def get_spending_stats(
 @router.get("/budget/settings", response_model=BudgetSettingsResponse)
 async def get_budget_settings(
     db: DBSession,
-    line_user_id: CurrentUserId
+    user_id: CurrentUserId
 ):
     """
     獲取預算設定
@@ -97,34 +88,25 @@ async def get_budget_settings(
 
     Args:
         db: 資料庫 session
-        line_user_id: LINE User ID（從 token 解析）
+        user_id: 使用者 ID（從 token 解析）
 
     Returns:
         BudgetSettingsResponse: 預算設定
 
     Raises:
-        HTTPException 404: 使用者不存在
         HTTPException 500: 伺服器內部錯誤
     """
     try:
-        # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="使用者不存在"
-            )
-
         # 查詢預算設定
         settings = db.query(BudgetSettings).filter(
-            BudgetSettings.user_id == user.id
+            BudgetSettings.user_id == user_id
         ).first()
 
         # 如果不存在，建立預設設定
         if not settings:
-            logger.info(f"為使用者 {user.id} 建立預設預算設定")
+            logger.info(f"為使用者 {user_id} 建立預設預算設定")
             settings = BudgetSettings(
-                user_id=user.id,
+                user_id=user_id,
                 monthly_budget=10000.0,
                 warning_threshold=80
             )
@@ -149,7 +131,7 @@ async def get_budget_settings(
 async def update_budget_settings(
     settings_update: BudgetSettingsUpdate,
     db: DBSession,
-    line_user_id: CurrentUserId
+    user_id: CurrentUserId
 ):
     """
     更新預算設定
@@ -159,35 +141,26 @@ async def update_budget_settings(
     Args:
         settings_update: 要更新的設定
         db: 資料庫 session
-        line_user_id: LINE User ID（從 token 解析）
+        user_id: 使用者 ID（從 token 解析）
 
     Returns:
         BudgetSettingsResponse: 更新後的預算設定
 
     Raises:
-        HTTPException 404: 使用者或設定不存在
         HTTPException 400: 驗證錯誤
         HTTPException 500: 伺服器內部錯誤
     """
     try:
-        # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="使用者不存在"
-            )
-
         # 查詢預算設定
         settings = db.query(BudgetSettings).filter(
-            BudgetSettings.user_id == user.id
+            BudgetSettings.user_id == user_id
         ).first()
 
         # 如果不存在，建立預設設定
         if not settings:
-            logger.info(f"為使用者 {user.id} 建立預設預算設定")
+            logger.info(f"為使用者 {user_id} 建立預設預算設定")
             settings = BudgetSettings(
-                user_id=user.id,
+                user_id=user_id,
                 monthly_budget=10000.0,
                 warning_threshold=80
             )
@@ -202,7 +175,7 @@ async def update_budget_settings(
         db.commit()
         db.refresh(settings)
 
-        logger.info(f"使用者 {user.id} 的預算設定已更新: 預算={settings.monthly_budget}, 門檻={settings.warning_threshold}%")
+        logger.info(f"使用者 {user_id} 的預算設定已更新: 預算={settings.monthly_budget}, 門檻={settings.warning_threshold}%")
         return settings
 
     except HTTPException:
@@ -226,7 +199,7 @@ async def update_budget_settings(
 @router.get("/budget/shopping-suggestions", response_model=List[ShoppingSuggestion])
 async def get_shopping_suggestions(
     db: DBSession,
-    line_user_id: CurrentUserId
+    user_id: CurrentUserId
 ):
     """
     獲取採買建議
@@ -238,28 +211,19 @@ async def get_shopping_suggestions(
 
     Args:
         db: 資料庫 session
-        line_user_id: LINE User ID（從 token 解析）
+        user_id: 使用者 ID（從 token 解析）
 
     Returns:
         List[ShoppingSuggestion]: 採買建議清單
 
     Raises:
-        HTTPException 404: 使用者不存在
         HTTPException 500: 伺服器內部錯誤
     """
     try:
-        # 查詢使用者
-        user = db.query(User).filter(User.line_user_id == line_user_id).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="使用者不存在"
-            )
-
         # 獲取採買建議
-        suggestions = BudgetService.get_shopping_suggestions(db, user.id)
+        suggestions = BudgetService.get_shopping_suggestions(db, user_id)
 
-        logger.info(f"為使用者 {user.id} 生成 {len(suggestions)} 個採買建議")
+        logger.info(f"為使用者 {user_id} 生成 {len(suggestions)} 個採買建議")
         return suggestions
 
     except HTTPException:
