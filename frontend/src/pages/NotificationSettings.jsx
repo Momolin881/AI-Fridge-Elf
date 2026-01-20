@@ -167,22 +167,22 @@ function NotificationSettings() {
           }
           style={{ marginBottom: '16px' }}
         >
-          <Form.Item
-            name="expiry_warning_enabled"
-            valuePropName="checked"
-            style={{ marginBottom: '16px' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <Text strong>啟用效期提醒</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  在食材即將過期時通知您
-                </Text>
-              </div>
-              <Switch />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <Text strong>啟用效期提醒</Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                在食材即將過期時通知您
+              </Text>
             </div>
-          </Form.Item>
+            <Form.Item
+              name="expiry_warning_enabled"
+              valuePropName="checked"
+              style={{ marginBottom: 0 }}
+            >
+              <Switch />
+            </Form.Item>
+          </div>
 
           <Form.Item
             noStyle
@@ -229,22 +229,22 @@ function NotificationSettings() {
           }
           style={{ marginBottom: '16px' }}
         >
-          <Form.Item
-            name="budget_warning_enabled"
-            valuePropName="checked"
-            style={{ marginBottom: '16px' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <Text strong>啟用消費提醒</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  當月消費超過設定金額時通知您
-                </Text>
-              </div>
-              <Switch />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <Text strong>啟用消費提醒</Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                當月消費超過設定金額時通知您
+              </Text>
             </div>
-          </Form.Item>
+            <Form.Item
+              name="budget_warning_enabled"
+              valuePropName="checked"
+              style={{ marginBottom: 0 }}
+            >
+              <Switch />
+            </Form.Item>
+          </div>
 
           <Form.Item
             noStyle
