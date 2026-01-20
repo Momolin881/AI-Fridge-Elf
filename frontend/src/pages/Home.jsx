@@ -410,21 +410,19 @@ function Home() {
               </Popover>
             </div>
 
-            {/* 風險進度條 */}
-            <div>
-              <Progress
-                percent={expiringPercentage}
-                strokeColor={
-                  expiringPercentage > 50
-                    ? '#ff4d4f'
-                    : expiringPercentage > 20
-                      ? '#faad14'
-                      : '#52c41a'
-                }
-                status="active"
-                format={(percent) => <span style={{ fontSize: 12 }}>{percent}% 需注意</span>}
-              />
-            </div>
+            {/* 引導文字 */}
+            {(expiredItems.length > 0 || expiringItems.length > 0) && (
+              <div style={{
+                background: '#fff7e6',
+                border: '1px solid #ffd591',
+                borderRadius: 8,
+                padding: '8px 12px',
+                fontSize: 12,
+                color: '#ad6800'
+              }}>
+                💡 請盡快處理過期食材，點進頁面按「已處理」，讓看板歸零。
+              </div>
+            )}
 
             {/* 成員清單 */}
             {members.length > 0 && (

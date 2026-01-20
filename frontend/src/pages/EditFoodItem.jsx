@@ -24,7 +24,7 @@ import {
 } from 'antd';
 import { DeleteOutlined, CalendarOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getFoodItem, updateFoodItem, deleteFoodItem, archiveFoodItem } from '../services/api';
+import { getFoodItem, updateFoodItem, deleteFoodItem, archiveFoodItem, getNotificationSettings } from '../services/api';
 import { CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -40,10 +40,24 @@ function EditFoodItem() {
   const [archiving, setArchiving] = useState(false);
   const [foodItem, setFoodItem] = useState(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [expiryWarningDays, setExpiryWarningDays] = useState(3); // 預設 3 天
 
   useEffect(() => {
     loadFoodItem();
+    loadNotificationSettings();
   }, [id]);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const settings = await getNotificationSettings();
+      if (settings?.expiry_warning_days) {
+        setExpiryWarningDays(settings.expiry_warning_days);
+      }
+    } catch (error) {
+      console.error('載入通知設定失敗:', error);
+      // 失敗時使用預設值 3 天
+    }
+  };
 
   const loadFoodItem = async () => {
     try {
@@ -138,6 +152,50 @@ function EditFoodItem() {
         </Title>
 
         <Card>
+          {/* 已處理按鈕 - 只有已過期或即將過期（3天內）的 active 食材才顯示 */}
+          {foodItem?.status !== 'archived' &&
+            foodItem?.expiry_date &&
+            dayjs(foodItem.expiry_date).diff(dayjs(), 'day') <= expiryWarningDays && (
+              <Popconfirm
+                title="確定要標記為「已處理」嗎？"
+                description="食材將從冰箱清單移除，進入歷史紀錄"
+                onConfirm={handleArchive}
+                okText="確定"
+                cancelText="取消"
+                okButtonProps={{ style: { background: '#52c41a', borderColor: '#52c41a' } }}
+              >
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  loading={archiving}
+                  size="large"
+                  block
+                  style={{
+                    background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+                    border: 'none',
+                    marginBottom: 16,
+                  }}
+                >
+                  標記為「已處理」
+                </Button>
+              </Popconfirm>
+            )}
+
+          {/* 已封存提示 */}
+          {foodItem?.status === 'archived' && (
+            <div style={{
+              padding: '12px 16px',
+              background: '#f6ffed',
+              border: '1px solid #b7eb8f',
+              borderRadius: 8,
+              textAlign: 'center',
+              marginBottom: 16,
+            }}>
+              <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+              此食材已於 {foodItem.archived_at ? dayjs(foodItem.archived_at).format('YYYY-MM-DD HH:mm') : '-'} 標記為已處理
+            </div>
+          )}
+
           {/* 顯示圖片（如果有） */}
           {foodItem?.image_url && (
             <div style={{ marginBottom: 24, textAlign: 'center' }}>
@@ -251,46 +309,6 @@ function EditFoodItem() {
                     儲存變更
                   </Button>
                 </Space>
-
-                {/* 已處理按鈕 - 只有 active 狀態才顯示 */}
-                {foodItem?.status !== 'archived' && (
-                  <Popconfirm
-                    title="確定要標記為「已處理」嗎？"
-                    description="食材將從冰箱清單移除，進入歷史紀錄"
-                    onConfirm={handleArchive}
-                    okText="確定"
-                    cancelText="取消"
-                    okButtonProps={{ style: { background: '#52c41a', borderColor: '#52c41a' } }}
-                  >
-                    <Button
-                      type="primary"
-                      icon={<CheckCircleOutlined />}
-                      loading={archiving}
-                      size="large"
-                      block
-                      style={{
-                        background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
-                        border: 'none',
-                      }}
-                    >
-                      標記為「已處理」
-                    </Button>
-                  </Popconfirm>
-                )}
-
-                {/* 已封存提示 */}
-                {foodItem?.status === 'archived' && (
-                  <div style={{
-                    padding: '12px 16px',
-                    background: '#f6ffed',
-                    border: '1px solid #b7eb8f',
-                    borderRadius: 8,
-                    textAlign: 'center',
-                  }}>
-                    <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
-                    此食材已於 {foodItem.archived_at ? dayjs(foodItem.archived_at).format('YYYY-MM-DD HH:mm') : '-'} 標記為已處理
-                  </div>
-                )}
 
                 <Popconfirm
                   title="確定要刪除此食材嗎？"
