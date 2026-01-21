@@ -246,14 +246,8 @@ function Home() {
             background: 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)',
           }}
         >
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <PlusOutlined style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }} />
-            <div style={{ fontSize: 16, color: '#1890ff', fontWeight: 500 }}>
-              點擊新增食材
-            </div>
-            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-              拍照辨識或手動輸入
-            </div>
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <span style={{ fontSize: 32, color: '#1890ff' }}>+ 📸</span>
           </div>
         </Card>
 
@@ -274,19 +268,12 @@ function Home() {
         {/* 統計卡片 */}
         <Card style={{ marginBottom: 16 }}>
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            {/* 冰箱資訊 */}
+            {/* 冰箱模式標籤 */}
             {fridges.length > 0 && (
-              <div style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 14, color: '#666' }}>
-                    {fridges[0].model_name || '我的冰箱'}
-                  </span>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Tag color={fridges[0].compartment_mode === 'detailed' ? 'purple' : 'default'}>
-                      {fridges[0].compartment_mode === 'detailed' ? '🗂️ 細分模式' : '📦 簡易模式'}
-                    </Tag>
-                  </div>
-                </div>
+              <div style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0', textAlign: 'right' }}>
+                <Tag color={fridges[0].compartment_mode === 'detailed' ? 'purple' : 'default'}>
+                  {fridges[0].compartment_mode === 'detailed' ? '🗂️ 細分模式' : '📦 簡易模式'}
+                </Tag>
               </div>
             )}
 
@@ -420,74 +407,7 @@ function Home() {
                 fontSize: 12,
                 color: '#ad6800'
               }}>
-                💡 請盡快處理過期食材，點進頁面按「已處理」，讓看板歸零。
-              </div>
-            )}
-
-            {/* 成員清單 */}
-            {members.length > 0 && (
-              <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <TeamOutlined style={{ color: '#666' }} />
-                    <span style={{ fontSize: 13, color: '#666' }}>冰箱成員 ({members.length})</span>
-                  </div>
-                  {isOwner && (
-                    <span
-                      style={{ fontSize: 12, color: '#1890ff', cursor: 'pointer' }}
-                      onClick={() => setMemberModalVisible(true)}
-                    >
-                      編輯
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: -8 }}>
-                  {members.slice(0, 5).map((member, idx) => (
-                    <div
-                      key={member.id}
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        border: member.role === 'owner' ? '2px solid #faad14' : '2px solid #fff',
-                        overflow: 'hidden',
-                        marginLeft: idx > 0 ? -8 : 0,
-                        background: '#1890ff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                        fontSize: 12,
-                      }}
-                      title={`${member.display_name} (${member.role === 'owner' ? '管理員' : member.role === 'editor' ? '共享者' : '檢視者'})`}
-                    >
-                      {member.picture_url ? (
-                        <img src={member.picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        member.display_name?.[0] || '?'
-                      )}
-                    </div>
-                  ))}
-                  {members.length > 5 && (
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        border: '2px solid #fff',
-                        marginLeft: -8,
-                        background: '#d9d9d9',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#666',
-                        fontSize: 11,
-                      }}
-                    >
-                      +{members.length - 5}
-                    </div>
-                  )}
-                </div>
+                請盡快處理過期，點進按「已處理」，讓看板歸零
               </div>
             )}
 
@@ -564,6 +484,73 @@ function Home() {
                 食譜推薦
               </Button>
             </div>
+
+            {/* 成員清單 */}
+            {members.length > 0 && (
+              <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <TeamOutlined style={{ color: '#666' }} />
+                    <span style={{ fontSize: 13, color: '#666' }}>冰箱成員 ({members.length})</span>
+                  </div>
+                  {isOwner && (
+                    <span
+                      style={{ fontSize: 12, color: '#1890ff', cursor: 'pointer' }}
+                      onClick={() => setMemberModalVisible(true)}
+                    >
+                      編輯
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: -8 }}>
+                  {members.slice(0, 5).map((member, idx) => (
+                    <div
+                      key={member.id}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        border: member.role === 'owner' ? '2px solid #faad14' : '2px solid #fff',
+                        overflow: 'hidden',
+                        marginLeft: idx > 0 ? -8 : 0,
+                        background: '#1890ff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: 12,
+                      }}
+                      title={`${member.display_name} (${member.role === 'owner' ? '管理員' : member.role === 'editor' ? '共享者' : '檢視者'})`}
+                    >
+                      {member.picture_url ? (
+                        <img src={member.picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        member.display_name?.[0] || '?'
+                      )}
+                    </div>
+                  ))}
+                  {members.length > 5 && (
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        border: '2px solid #fff',
+                        marginLeft: -8,
+                        background: '#d9d9d9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#666',
+                        fontSize: 11,
+                      }}
+                    >
+                      +{members.length - 5}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </Space>
         </Card>
 
