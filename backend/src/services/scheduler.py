@@ -6,6 +6,7 @@
 
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import func
@@ -18,8 +19,11 @@ from src.services.line_bot import send_expiry_notification, send_space_warning
 
 logger = logging.getLogger(__name__)
 
-# 建立背景排程器
-scheduler = BackgroundScheduler()
+# 台灣時區
+TAIWAN_TZ = ZoneInfo("Asia/Taipei")
+
+# 建立背景排程器（使用台灣時區）
+scheduler = BackgroundScheduler(timezone=TAIWAN_TZ)
 
 
 def start_scheduler():
@@ -93,8 +97,9 @@ def check_expiring_items():
 
         for settings in settings_list:
             try:
-                # 計算提醒日期
-                warning_date = datetime.utcnow().date() + timedelta(days=settings.expiry_warning_days)
+                # 使用台灣時間計算提醒日期
+                today_taiwan = datetime.now(TAIWAN_TZ).date()
+                warning_date = today_taiwan + timedelta(days=settings.expiry_warning_days)
 
                 # 查詢該使用者即將過期或已過期的食材
                 expiring_items = db.query(FoodItem).join(
@@ -110,7 +115,7 @@ def check_expiring_items():
                     # 準備通知資料
                     items_data = []
                     for item in expiring_items:
-                        days_remaining = (item.expiry_date - datetime.utcnow().date()).days
+                        days_remaining = (item.expiry_date - today_taiwan).days
                         items_data.append({
                             "name": item.name,
                             "expiry_date": item.expiry_date.isoformat(),
