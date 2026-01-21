@@ -108,20 +108,39 @@ class RecipeService:
 6. 只返回 JSON，不要包含其他說明文字
 """
 
-            # 呼叫 GPT-4 API
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "你是一位專業的料理顧問，擅長根據現有食材推薦食譜。"},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=2000,
-            )
+            # 呼叫 GPT API（加入重試邏輯和備用模型）
+            models_to_try = ["gpt-4o-mini", "gpt-3.5-turbo"]  # 優先用快速模型
+            max_retries = 2
+            last_error = None
+            content = None
 
-            # 解析回應
-            content = response.choices[0].message.content.strip()
-            logger.info(f"GPT-4 回應: {content[:200]}...")
+            for model in models_to_try:
+                for attempt in range(max_retries):
+                    try:
+                        logger.info(f"嘗試使用 {model} 推薦食譜 (第 {attempt + 1} 次)")
+                        response = client.chat.completions.create(
+                            model=model,
+                            messages=[
+                                {"role": "system", "content": "你是一位專業的料理顧問，擅長根據現有食材推薦食譜。"},
+                                {"role": "user", "content": prompt}
+                            ],
+                            temperature=0.7,
+                            max_tokens=2000,
+                            timeout=30,  # 30 秒 timeout
+                        )
+                        content = response.choices[0].message.content.strip()
+                        logger.info(f"GPT 回應成功: {content[:100]}...")
+                        break  # 成功就跳出重試迴圈
+                    except Exception as e:
+                        last_error = e
+                        logger.warning(f"{model} 第 {attempt + 1} 次呼叫失敗: {e}")
+                        continue
+                
+                if content:
+                    break  # 成功就跳出模型迴圈
+
+            if not content:
+                raise Exception(f"所有 AI 模型呼叫都失敗: {last_error}")
 
             # 移除可能的 markdown 代碼區塊標記
             if content.startswith("```json"):
