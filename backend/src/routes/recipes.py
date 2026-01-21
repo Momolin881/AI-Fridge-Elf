@@ -69,6 +69,11 @@ async def get_recipe_recommendations(
             item_ids=request.item_ids if request.item_ids else None
         )
 
+        # 記錄回傳結果
+        logger.info(f"使用者 {user_id} 食譜推薦成功，回傳 {len(recommendations)} 個食譜")
+        for i, rec in enumerate(recommendations):
+            logger.info(f"  食譜 {i+1}: {rec.name}")
+
         return recommendations
 
     except HTTPException:
