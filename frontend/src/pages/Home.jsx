@@ -25,8 +25,8 @@ import {
   Button,
   Popover,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined, BulbOutlined } from '@ant-design/icons';
-import { getFoodItems, getFridges, deleteFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember } from '../services/api';
+import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined, BulbOutlined, BookOutlined } from '@ant-design/icons';
+import { getFoodItems, getFridges, deleteFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember, getUserRecipes } from '../services/api';
 import { FoodItemCard, VersionFooter, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -49,6 +49,7 @@ function Home() {
   const [exportLoading, setExportLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [memberModalVisible, setMemberModalVisible] = useState(false);
+  const [recipeCategoryCounts, setRecipeCategoryCounts] = useState({ favorites: 0, '常煮': 0, pro: 0 });
 
   useEffect(() => {
     loadData();
@@ -108,6 +109,22 @@ function Home() {
           console.log('載入成員清單失敗:', e);
           // 如果載入失敗，預設為 owner（因為可能是第一次使用）
           setIsOwner(true);
+        }
+
+        // 載入食譜分類數量
+        try {
+          const [favoritesRecipes, changzhuRecipes, proRecipes] = await Promise.all([
+            getUserRecipes('favorites'),
+            getUserRecipes('常煮'),
+            getUserRecipes('pro'),
+          ]);
+          setRecipeCategoryCounts({
+            favorites: favoritesRecipes?.length || 0,
+            '常煮': changzhuRecipes?.length || 0,
+            pro: proRecipes?.length || 0,
+          });
+        } catch (e) {
+          console.log('載入食譜分類失敗:', e);
         }
       } else {
         setIsOwner(true); // 沒有冰箱時預設為 owner
@@ -483,6 +500,31 @@ function Home() {
               >
                 食譜推薦
               </Button>
+              {/* 食譜分類按鈕 - 只顯示有食譜的分類 */}
+              {recipeCategoryCounts.favorites > 0 && (
+                <Button
+                  icon={<BookOutlined />}
+                  onClick={() => navigate('/recipes?category=favorites')}
+                >
+                  收藏 ({recipeCategoryCounts.favorites})
+                </Button>
+              )}
+              {recipeCategoryCounts['常煮'] > 0 && (
+                <Button
+                  icon={<BookOutlined />}
+                  onClick={() => navigate('/recipes?category=常煮')}
+                >
+                  常煮 ({recipeCategoryCounts['常煮']})
+                </Button>
+              )}
+              {recipeCategoryCounts.pro > 0 && (
+                <Button
+                  icon={<BookOutlined />}
+                  onClick={() => navigate('/recipes?category=pro')}
+                >
+                  Pro ({recipeCategoryCounts.pro})
+                </Button>
+              )}
             </div>
 
             {/* 成員清單 */}

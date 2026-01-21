@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Layout,
   Card,
@@ -34,8 +34,11 @@ const { TabPane } = Tabs;
 
 function UserRecipes() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialCategory = searchParams.get('category') || 'favorites';
+
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('favorites');
+  const [activeTab, setActiveTab] = useState(initialCategory);
   const [recipes, setRecipes] = useState({
     favorites: [],
     常煮: [],
