@@ -46,9 +46,10 @@ class RecipeService:
             Exception: AI 推薦失敗時拋出
         """
         try:
-            # 查詢食材
+            # 查詢食材（只查詢 active 狀態，排除已處理的）
             query = db.query(FoodItem).join(FoodItem.fridge).filter(
-                FoodItem.fridge.has(user_id=user_id)
+                FoodItem.fridge.has(user_id=user_id),
+                FoodItem.status == 'active'
             )
 
             if item_ids:
