@@ -26,6 +26,10 @@ class NotificationSettingsResponse(BaseModel):
     space_warning_enabled: bool = Field(default=True, description="是否啟用空間提醒")
     space_warning_threshold: int = Field(default=80, ge=50, le=100, description="空間使用率門檻（50-100%）")
 
+    # 預算提醒設定
+    budget_warning_enabled: bool = Field(default=False, description="是否啟用預算提醒")
+    budget_warning_amount: int = Field(default=5000, ge=0, description="月消費上限")
+
     # 通知時間設定
     notification_time: str = Field(default="09:00", description="通知時間（HH:MM 格式）")
 
@@ -56,6 +60,8 @@ class NotificationSettingsResponse(BaseModel):
                 "low_stock_threshold": 1,
                 "space_warning_enabled": True,
                 "space_warning_threshold": 80,
+                "budget_warning_enabled": False,
+                "budget_warning_amount": 5000,
                 "notification_time": "09:00"
             }
         }
@@ -76,6 +82,10 @@ class NotificationSettingsUpdate(BaseModel):
     # 空間提醒設定
     space_warning_enabled: bool | None = Field(None, description="是否啟用空間提醒")
     space_warning_threshold: int | None = Field(None, ge=50, le=100, description="空間使用率門檻（50-100%）")
+
+    # 預算提醒設定
+    budget_warning_enabled: bool | None = Field(None, description="是否啟用預算提醒")
+    budget_warning_amount: int | None = Field(None, ge=0, description="月消費上限")
 
     # 通知時間設定
     notification_time: str | None = Field(None, description="通知時間（HH:MM 格式）")

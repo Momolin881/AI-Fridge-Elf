@@ -355,21 +355,23 @@ function AddFoodItem() {
               />
             </Form.Item>
 
-            <Form.Item label="價格（台幣）" name="price">
-              <Space.Compact style={{ width: '100%' }}>
-                <InputNumber
-                  min={0}
-                  placeholder="選填"
-                  style={{ width: '100%' }}
-                  size="large"
-                />
+            <Form.Item label="價格（台幣）">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Form.Item name="price" noStyle>
+                  <InputNumber
+                    min={0}
+                    placeholder="選填"
+                    style={{ flex: 1 }}
+                    size="large"
+                  />
+                </Form.Item>
                 <Button
                   type="primary"
                   size="large"
                   icon={<CalendarOutlined />}
                   onClick={() => setCalendarVisible(true)}
                 />
-              </Space.Compact>
+              </div>
               <div style={{ textAlign: 'right', marginTop: 4 }}>
                 <span style={{ fontSize: 12, color: '#1890ff', cursor: 'pointer' }} onClick={() => setCalendarVisible(true)}>
                   查看/紀錄本月消費紀錄

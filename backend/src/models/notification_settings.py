@@ -31,6 +31,10 @@ class NotificationSettings(Base):
     space_warning_enabled = Column(Boolean, default=True, nullable=False)
     space_warning_threshold = Column(Integer, default=80, nullable=False)  # 空間使用率門檻（預設 80%）
 
+    # 預算提醒設定
+    budget_warning_enabled = Column(Boolean, default=False, nullable=False)
+    budget_warning_amount = Column(Integer, default=5000, nullable=False)  # 月消費上限（預設 5000）
+
     # 通知時間設定
     notification_time = Column(Time, default=time(9, 0), nullable=False)  # 預設早上 9:00
 

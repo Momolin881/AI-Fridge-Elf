@@ -56,6 +56,8 @@ async def get_notification_settings(
                 low_stock_threshold=1,
                 space_warning_enabled=True,
                 space_warning_threshold=80,
+                budget_warning_enabled=False,
+                budget_warning_amount=5000,
                 notification_time=time(9, 0)
             )
             db.add(settings)
@@ -115,6 +117,8 @@ async def update_notification_settings(
                 low_stock_threshold=1,
                 space_warning_enabled=True,
                 space_warning_threshold=80,
+                budget_warning_enabled=False,
+                budget_warning_amount=5000,
                 notification_time=time(9, 0)
             )
             db.add(settings)

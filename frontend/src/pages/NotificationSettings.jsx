@@ -47,14 +47,12 @@ function NotificationSettings() {
       setLoading(true);
       const settings = await getNotificationSettings();
 
-      // 轉換資料格式以符合表單
-      // budget_warning 暫存於 localStorage（後端尚未支援）
-      const budgetSettings = JSON.parse(localStorage.getItem('budgetWarningSettings') || '{}');
+      // 轉換資料格式以符合表單（現在後端已支援 budget_warning）
       form.setFieldsValue({
         expiry_warning_enabled: settings.expiry_warning_enabled,
         expiry_warning_days: settings.expiry_warning_days,
-        budget_warning_enabled: budgetSettings.enabled || false,
-        budget_warning_amount: budgetSettings.amount || 5000,
+        budget_warning_enabled: settings.budget_warning_enabled ?? false,
+        budget_warning_amount: settings.budget_warning_amount ?? 5000,
         notification_time: settings.notification_time ? dayjs(settings.notification_time, 'HH:mm') : dayjs('09:00', 'HH:mm')
       });
 
@@ -70,16 +68,12 @@ function NotificationSettings() {
     try {
       setSubmitting(true);
 
-      // 儲存 budget_warning 到 localStorage（後端尚未支援）
-      localStorage.setItem('budgetWarningSettings', JSON.stringify({
-        enabled: values.budget_warning_enabled,
-        amount: values.budget_warning_amount
-      }));
-
-      // 轉換資料格式（只送後端支援的欄位）
+      // 轉換資料格式（現在後端已支援所有欄位）
       const settings = {
         expiry_warning_enabled: values.expiry_warning_enabled,
         expiry_warning_days: values.expiry_warning_days,
+        budget_warning_enabled: values.budget_warning_enabled,
+        budget_warning_amount: values.budget_warning_amount,
         notification_time: values.notification_time.format('HH:mm')
       };
 
