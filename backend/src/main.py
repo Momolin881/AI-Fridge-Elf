@@ -30,6 +30,17 @@ async def lifespan(app: FastAPI):
     關閉時: 關閉排程器
     """
     # Startup
+    # 顯示時區資訊（debug 用）
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import os
+    taiwan_tz = ZoneInfo("Asia/Taipei")
+    utc_now = datetime.utcnow()
+    taiwan_now = datetime.now(taiwan_tz)
+    print(f"系統時區環境變數 TZ: {os.environ.get('TZ', '未設定')}")
+    print(f"UTC 時間: {utc_now.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"台灣時間: {taiwan_now.strftime('%Y-%m-%d %H:%M:%S')}")
+
     # 建立所有資料庫表格（如果不存在）
     Base.metadata.create_all(bind=engine)
     print("資料庫表格初始化完成")

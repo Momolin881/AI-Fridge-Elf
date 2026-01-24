@@ -2,10 +2,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 安裝系統依賴
+# 設定時區為台灣
+ENV TZ=Asia/Taipei
+
+# 安裝系統依賴（含時區資料）
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
+    tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
 # 安裝 uv

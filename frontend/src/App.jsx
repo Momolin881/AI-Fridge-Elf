@@ -10,7 +10,7 @@ import { ConfigProvider, Spin, message } from 'antd';
 import zhTW from 'antd/locale/zh_TW';
 import { initializeLiff } from './liff';
 import { Home, FridgeSetup, AddFoodItem, EditFoodItem, FridgeSettings, NotificationSettings, BudgetManagement, RecipeRecommendations, RecipeDetail, UserRecipes } from './pages';
-import { getFridges } from './services/api';
+import { getFridges, joinFridgeByCode } from './services/api';
 
 // 載入元件
 const LoadingPage = () => (
@@ -27,11 +27,75 @@ const LoadingPage = () => (
   </div>
 );
 
+// 在 LIFF 初始化之前先保存 URL 參數（因為 LIFF 可能會清除它們）
+const getInitialJoinCode = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const joinCode = urlParams.get('join');
+  if (joinCode) {
+    console.log('頁面載入時發現邀請碼:', joinCode);
+    // 保存到 sessionStorage，避免 LIFF 初始化後丟失
+    sessionStorage.setItem('pendingJoinCode', joinCode);
+  }
+  return joinCode;
+};
+
+// 頁面載入時立即檢查
+const initialJoinCode = getInitialJoinCode();
+
 function App() {
   const [liffReady, setLiffReady] = useState(false);
   const [liffError, setLiffError] = useState(null);
   const [hasFridge, setHasFridge] = useState(true);
   const [checkingFridge, setCheckingFridge] = useState(true);
+  const [joiningFridge, setJoiningFridge] = useState(false);
+
+  // 處理邀請碼加入冰箱
+  const handleJoinByInviteCode = async () => {
+    // 優先從 sessionStorage 讀取（LIFF 初始化可能會清除 URL 參數）
+    let joinCode = sessionStorage.getItem('pendingJoinCode');
+
+    // 如果 sessionStorage 沒有，再從 URL 讀取
+    if (!joinCode) {
+      const urlParams = new URLSearchParams(window.location.search);
+      joinCode = urlParams.get('join');
+    }
+
+    if (!joinCode) {
+      return false;
+    }
+
+    console.log('處理邀請碼:', joinCode);
+    setJoiningFridge(true);
+
+    try {
+      const result = await joinFridgeByCode(joinCode);
+      message.success(`成功加入冰箱！角色：${result.role === 'editor' ? '共享者' : '檢視者'}`);
+
+      // 清除暫存的邀請碼
+      sessionStorage.removeItem('pendingJoinCode');
+
+      // 清除 URL 中的 join 參數，避免重複加入
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+
+      return true;
+    } catch (error) {
+      console.error('加入冰箱失敗:', error);
+      const errorMsg = error.response?.data?.detail || '加入冰箱失敗';
+      message.error(errorMsg);
+
+      // 清除暫存的邀請碼
+      sessionStorage.removeItem('pendingJoinCode');
+
+      // 清除 URL 中的 join 參數
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+
+      return false;
+    } finally {
+      setJoiningFridge(false);
+    }
+  };
 
   useEffect(() => {
     // 初始化 LIFF SDK
@@ -41,7 +105,11 @@ function App() {
 
         if (isReady) {
           setLiffReady(true);
-          // 檢查是否已設定冰箱
+
+          // 先處理邀請碼加入
+          await handleJoinByInviteCode();
+
+          // 再檢查是否已設定冰箱
           checkFridgeSetup();
         } else {
           // 登入中，等待重新導向
@@ -90,8 +158,8 @@ function App() {
     );
   }
 
-  // 初始化中或檢查冰箱設定中
-  if (!liffReady || checkingFridge) {
+  // 初始化中或檢查冰箱設定中或加入冰箱中
+  if (!liffReady || checkingFridge || joiningFridge) {
     return <LoadingPage />;
   }
 

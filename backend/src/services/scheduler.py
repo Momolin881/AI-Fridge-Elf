@@ -35,19 +35,19 @@ def start_scheduler():
         return
 
     try:
-        # 註冊每日任務：檢查即將過期食材（每天早上 9:00 執行）
+        # 註冊每日任務：檢查即將過期食材（每天早上 9:00 台灣時間執行）
         scheduler.add_job(
             check_expiring_items,
-            trigger=CronTrigger(hour=9, minute=0),
+            trigger=CronTrigger(hour=9, minute=0, timezone=TAIWAN_TZ),
             id="check_expiring_items",
             name="檢查即將過期食材",
             replace_existing=True
         )
 
-        # 註冊每日任務：檢查空間使用率（每天早上 9:00 執行）
+        # 註冊每日任務：檢查空間使用率（每天早上 9:00 台灣時間執行）
         scheduler.add_job(
             check_space_usage,
-            trigger=CronTrigger(hour=9, minute=0),
+            trigger=CronTrigger(hour=9, minute=0, timezone=TAIWAN_TZ),
             id="check_space_usage",
             name="檢查冰箱空間使用率",
             replace_existing=True
@@ -144,9 +144,13 @@ def check_space_usage():
     檢查所有使用者的冰箱空間使用率並發送警告
 
     遍歷所有啟用空間提醒的使用者，檢查其冰箱空間使用率。
+    使用食材數量來估算空間使用率（假設每個冰箱最多存放 50 項食材）。
     """
     logger.info("開始執行：檢查冰箱空間使用率")
     db = SessionLocal()
+
+    # 預設每個冰箱的最大食材數量（用於估算使用率）
+    DEFAULT_MAX_ITEMS = 50
 
     try:
         # 查詢所有啟用空間提醒的通知設定
@@ -164,27 +168,20 @@ def check_space_usage():
                 ).all()
 
                 for fridge in fridges:
-                    # 計算總容量和已使用容量
-                    compartments = db.query(FridgeCompartment).filter(
-                        FridgeCompartment.fridge_id == fridge.id
-                    ).all()
-
-                    total_capacity = sum(c.total_slots for c in compartments)
-                    if total_capacity == 0:
-                        continue
-
-                    # 計算已使用的格子數
-                    used_slots = db.query(func.count(FoodItem.id)).filter(
-                        FoodItem.fridge_id == fridge.id
+                    # 計算已存放的食材數量（只計算 active 狀態）
+                    item_count = db.query(func.count(FoodItem.id)).filter(
+                        FoodItem.fridge_id == fridge.id,
+                        FoodItem.status == 'active'
                     ).scalar()
 
-                    # 計算使用率
-                    usage_percentage = (used_slots / total_capacity) * 100
+                    # 計算使用率（以食材數量估算）
+                    usage_percentage = (item_count / DEFAULT_MAX_ITEMS) * 100
 
                     # 如果超過門檻，發送警告
                     if usage_percentage >= settings.space_warning_threshold:
                         logger.info(
                             f"冰箱 {fridge.id} 空間使用率 {usage_percentage:.1f}% "
+                            f"({item_count}/{DEFAULT_MAX_ITEMS} 項) "
                             f"超過門檻 {settings.space_warning_threshold}%"
                         )
                         send_space_warning(settings.user.line_user_id, usage_percentage)

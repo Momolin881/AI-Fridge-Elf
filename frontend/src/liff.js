@@ -26,7 +26,9 @@ export const initializeLiff = async () => {
 
     // 檢查登入狀態
     if (!liff.isLoggedIn()) {
-      liff.login();
+      // 保留當前 URL 參數（如 ?join=XXX），登入後重新導向回來
+      const currentUrl = window.location.href;
+      liff.login({ redirectUri: currentUrl });
       return false;
     }
 
