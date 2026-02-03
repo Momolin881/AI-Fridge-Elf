@@ -46,30 +46,32 @@ async def lifespan(app: FastAPI):
     print("資料庫表格初始化完成")
 
     # 手動新增可能缺少的欄位（SQLAlchemy create_all 不會修改已存在的表格）
-    from sqlalchemy import text
-    from sqlalchemy.exc import ProgrammingError, InternalError
+    from sqlalchemy import text, inspect
     
-    # 使用獨立連線處理每個欄位，避免 transaction 錯誤影響其他操作
-    def add_column_if_not_exists(column_name, column_type):
-        """嘗試新增欄位，如果已存在則跳過"""
-        try:
-            with engine.connect() as conn:
-                conn.execute(text(f"ALTER TABLE food_items ADD COLUMN {column_name} {column_type}"))
+    # 使用 inspector 檢查欄位是否存在，避免 PostgreSQL transaction 錯誤
+    inspector = inspect(engine)
+    
+    try:
+        existing_columns = [col['name'] for col in inspector.get_columns('food_items')]
+        print(f"現有 food_items 欄位: {existing_columns}")
+        
+        # 只在欄位不存在時才新增
+        with engine.connect() as conn:
+            if 'disposal_reason' not in existing_columns:
+                conn.execute(text("ALTER TABLE food_items ADD COLUMN disposal_reason VARCHAR(20)"))
                 conn.commit()
-                print(f"已新增 food_items.{column_name} 欄位")
-                return True
-        except (ProgrammingError, InternalError) as e:
-            # PostgreSQL 會在欄位已存在時拋出錯誤
-            error_str = str(e).lower()
-            if "already exists" in error_str or "duplicate column" in error_str:
-                print(f"food_items.{column_name} 欄位已存在")
+                print("已新增 food_items.disposal_reason 欄位")
             else:
-                print(f"檢查 {column_name} 欄位時發生錯誤: {e}")
-            return False
-    
-    # 逐一新增缺少的欄位
-    add_column_if_not_exists("disposal_reason", "VARCHAR(20)")
-    add_column_if_not_exists("volume_liters", "FLOAT")
+                print("food_items.disposal_reason 欄位已存在")
+            
+            if 'volume_liters' not in existing_columns:
+                conn.execute(text("ALTER TABLE food_items ADD COLUMN volume_liters FLOAT"))
+                conn.commit()
+                print("已新增 food_items.volume_liters 欄位")
+            else:
+                print("food_items.volume_liters 欄位已存在")
+    except Exception as e:
+        print(f"資料庫欄位檢查/新增時發生錯誤（可忽略）: {e}")
 
     # 啟動排程器
     scheduler.start_scheduler()
