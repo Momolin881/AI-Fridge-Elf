@@ -316,3 +316,61 @@ async def recognize_food_item(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"AI 辨識失敗: {str(e)}",
         ) from e
+
+
+@router.post("/food-items/upload-image")
+async def upload_food_image(
+    db: DBSession,
+    user_id: CurrentUserId,
+    fridge_id: int = Form(...),
+    image: UploadFile = File(...),
+):
+    """
+    純圖片上傳（不含 AI 辨識）
+
+    用於手動輸入模式或編輯時上傳/更換圖片。
+    
+    接收 multipart/form-data:
+    - fridge_id: 冰箱 ID（用於驗證權限）
+    - image: 圖片檔案
+    
+    Returns:
+        image_url: Cloudinary URL
+        cloudinary_public_id: Cloudinary public_id（用於刪除）
+    """
+    # 驗證冰箱所有權
+    fridge = db.query(Fridge).filter(
+        Fridge.id == fridge_id, Fridge.user_id == user_id
+    ).first()
+
+    if not fridge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="冰箱不存在或無權限存取"
+        )
+
+    # 驗證圖片格式
+    if not image.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="檔案必須是圖片格式"
+        )
+
+    try:
+        # 讀取圖片
+        image_bytes = await image.read()
+
+        # 上傳至 Cloudinary
+        upload_result = storage.upload_image(image_bytes, folder="food_items")
+
+        logger.info(f"使用者 {user_id} 上傳食材圖片成功")
+        
+        return {
+            "image_url": upload_result["url"],
+            "cloudinary_public_id": upload_result["public_id"],
+        }
+
+    except Exception as e:
+        logger.error(f"圖片上傳失敗: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"圖片上傳失敗: {str(e)}",
+        ) from e

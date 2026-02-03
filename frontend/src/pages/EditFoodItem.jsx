@@ -21,10 +21,11 @@ import {
   Spin,
   Popconfirm,
   Image,
+  Upload,
 } from 'antd';
-import { DeleteOutlined, CalendarOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, CalendarOutlined, CheckCircleOutlined, CameraOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getFoodItem, updateFoodItem, deleteFoodItem, archiveFoodItem, getNotificationSettings } from '../services/api';
+import { getFoodItem, updateFoodItem, deleteFoodItem, archiveFoodItem, getNotificationSettings, uploadFoodImage } from '../services/api';
 import { CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -41,6 +42,7 @@ function EditFoodItem() {
   const [foodItem, setFoodItem] = useState(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [expiryWarningDays, setExpiryWarningDays] = useState(3); // 預設 3 天
+  const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
     loadFoodItem();
@@ -136,6 +138,44 @@ function EditFoodItem() {
     }
   };
 
+  // 處理圖片上傳
+  const handleImageUpload = async (file) => {
+    if (!foodItem?.fridge_id) {
+      message.error('找不到冰箱資訊');
+      return false;
+    }
+
+    try {
+      setImageUploading(true);
+      message.loading({ content: '正在上傳圖片...', key: 'image-upload' });
+
+      // 上傳圖片
+      const result = await uploadFoodImage(file, foodItem.fridge_id);
+
+      // 更新食材圖片資訊
+      await updateFoodItem(id, {
+        image_url: result.image_url,
+        cloudinary_public_id: result.cloudinary_public_id,
+      });
+
+      // 更新本地狀態
+      setFoodItem(prev => ({
+        ...prev,
+        image_url: result.image_url,
+        cloudinary_public_id: result.cloudinary_public_id,
+      }));
+
+      message.success({ content: '圖片上傳成功！', key: 'image-upload' });
+    } catch (error) {
+      console.error('圖片上傳失敗:', error);
+      message.error({ content: '圖片上傳失敗，請稍後再試', key: 'image-upload' });
+    } finally {
+      setImageUploading(false);
+    }
+
+    return false; // 阻止 antd Upload 的預設上傳行為
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 0' }}>
@@ -196,21 +236,67 @@ function EditFoodItem() {
             </div>
           )}
 
-          {/* 顯示圖片（如果有） */}
-          {foodItem?.image_url && (
-            <div style={{ marginBottom: 24, textAlign: 'center' }}>
-              <Image
-                src={foodItem.image_url}
-                alt={foodItem.name}
-                style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8 }}
-              />
-              {foodItem.recognized_by_ai === 1 && (
-                <div style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
-                  此食材由 AI 辨識
+          {/* 圖片區域 - 顯示現有圖片或上傳新圖片 */}
+          <div style={{ marginBottom: 24 }}>
+            {foodItem?.image_url ? (
+              <div style={{ textAlign: 'center' }}>
+                <Image
+                  src={foodItem.image_url}
+                  alt={foodItem.name}
+                  style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8 }}
+                />
+                {foodItem.recognized_by_ai === 1 && (
+                  <div style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
+                    此食材由 AI 辨識
+                  </div>
+                )}
+                <Upload
+                  beforeUpload={handleImageUpload}
+                  showUploadList={false}
+                  accept="image/*"
+                >
+                  <Button
+                    icon={<CameraOutlined />}
+                    loading={imageUploading}
+                    style={{ marginTop: 12 }}
+                  >
+                    更換圖片
+                  </Button>
+                </Upload>
+              </div>
+            ) : (
+              <Upload
+                beforeUpload={handleImageUpload}
+                showUploadList={false}
+                accept="image/*"
+              >
+                <div
+                  style={{
+                    border: '2px dashed #d9d9d9',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: '#fafafa',
+                  }}
+                >
+                  {imageUploading ? (
+                    <Spin tip="上傳中..." />
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '28px', margin: 0 }}>📷</p>
+                      <p style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>
+                        點擊上傳食材圖片
+                      </p>
+                      <p style={{ fontSize: '12px', color: '#999' }}>
+                        支援 JPG、PNG 格式
+                      </p>
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              </Upload>
+            )}
+          </div>
 
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
             {/* 食材資訊表單 */}

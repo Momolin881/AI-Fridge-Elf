@@ -22,10 +22,12 @@ import {
   Space,
   Divider,
   Spin,
+  Upload,
+  Image,
 } from 'antd';
-import { CameraOutlined, FormOutlined, CalendarOutlined } from '@ant-design/icons';
+import { CameraOutlined, FormOutlined, CalendarOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getFridges, getFridge, recognizeFoodImage, createFoodItem } from '../services/api';
+import { getFridges, getFridge, recognizeFoodImage, createFoodItem, uploadFoodImage } from '../services/api';
 import { ImageUploader, CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -42,6 +44,8 @@ function AddFoodItem() {
   const [selectedFridge, setSelectedFridge] = useState(null);
   const [selectedFridgeDetail, setSelectedFridgeDetail] = useState(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [manualImageUploading, setManualImageUploading] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
 
   useEffect(() => {
     loadFridges();
@@ -132,12 +136,61 @@ function AddFoodItem() {
         cloudinary_public_id: result.cloudinary_public_id,
         recognized_by_ai: 1,
       });
+
+      // 設定預覽圖
+      setPreviewImageUrl(result.image_url);
     } catch (error) {
       console.error('AI 辨識失敗:', error);
       message.error({ content: 'AI 辨識失敗，請手動輸入', key: 'ai-recognition' });
     } finally {
       setAiRecognizing(false);
     }
+  };
+
+  // 手動模式下的圖片上傳（不含 AI 辨識）
+  const handleManualImageUpload = async (file) => {
+    const fridgeId = form.getFieldValue('fridge_id') || selectedFridge;
+    const validFridgeId = Number(fridgeId);
+
+    if (!fridgeId || isNaN(validFridgeId) || validFridgeId <= 0) {
+      message.warning('請先選擇冰箱');
+      return false;
+    }
+
+    try {
+      setManualImageUploading(true);
+      message.loading({ content: '正在上傳圖片...', key: 'manual-upload' });
+
+      // 上傳圖片（不含 AI 辨識）
+      const result = await uploadFoodImage(file, validFridgeId);
+
+      // 設定表單欄位
+      form.setFieldsValue({
+        image_url: result.image_url,
+        cloudinary_public_id: result.cloudinary_public_id,
+      });
+
+      // 顯示預覽圖
+      setPreviewImageUrl(result.image_url);
+
+      message.success({ content: '圖片上傳成功！', key: 'manual-upload' });
+    } catch (error) {
+      console.error('圖片上傳失敗:', error);
+      message.error({ content: '圖片上傳失敗，請稍後再試', key: 'manual-upload' });
+    } finally {
+      setManualImageUploading(false);
+    }
+
+    return false; // 阻止 antd Upload 預設行為
+  };
+
+  // 清除手動上傳的圖片
+  const handleClearManualImage = () => {
+    form.setFieldsValue({
+      image_url: null,
+      cloudinary_public_id: null,
+    });
+    setPreviewImageUrl(null);
   };
 
   const handleSubmit = async (values) => {
@@ -308,6 +361,61 @@ function AddFoodItem() {
                 </Form.Item>
                 <Divider>AI 辨識結果（可編輯）</Divider>
               </>
+            )}
+
+            {/* 手動模式：可選圖片上傳 */}
+            {mode === 'manual' && (
+              <Form.Item label="食材圖片（選填）">
+                {previewImageUrl ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <Image
+                      src={previewImageUrl}
+                      alt="preview"
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8 }}
+                    />
+                    <div style={{ marginTop: 12 }}>
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={handleClearManualImage}
+                      >
+                        移除圖片
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Upload
+                    beforeUpload={handleManualImageUpload}
+                    showUploadList={false}
+                    accept="image/*"
+                  >
+                    <div
+                      style={{
+                        border: '2px dashed #d9d9d9',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: '#fafafa',
+                      }}
+                    >
+                      {manualImageUploading ? (
+                        <Spin tip="上傳中..." />
+                      ) : (
+                        <>
+                          <p style={{ fontSize: '28px', margin: 0 }}>📷</p>
+                          <p style={{ marginTop: '6px', color: '#666', fontSize: '14px' }}>
+                            點擊上傳食材圖片（選填）
+                          </p>
+                          <p style={{ fontSize: '11px', color: '#999' }}>
+                            支援 JPG、PNG 格式
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </Upload>
+                )}
+              </Form.Item>
             )}
 
             {/* 食材資訊表單 */}

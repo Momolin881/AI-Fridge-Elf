@@ -150,6 +150,32 @@ export const recognizeFoodImage = (imageFile, fridgeId, storageType, compartment
 };
 
 /**
+ * 純圖片上傳（不含 AI 辨識）
+ * @param {File} imageFile - 圖片檔案
+ * @param {number} fridgeId - 冰箱 ID
+ * @returns {Promise<Object>} { image_url, cloudinary_public_id }
+ */
+export const uploadFoodImage = (imageFile, fridgeId) => {
+  // 驗證 fridgeId
+  const validFridgeId = Number(fridgeId);
+  if (!fridgeId || isNaN(validFridgeId) || validFridgeId <= 0) {
+    console.error('❌ Invalid fridge_id in uploadFoodImage:', { fridgeId, validFridgeId });
+    return Promise.reject(new Error('fridge_id 必須是有效的數字'));
+  }
+
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  formData.append('fridge_id', validFridgeId);
+
+  console.log('📤 uploadFoodImage called with:', {
+    imageFile: imageFile ? { name: imageFile.name, size: imageFile.size, type: imageFile.type } : null,
+    fridgeId: validFridgeId,
+  });
+
+  return apiClient.post('/food-items/upload-image', formData);
+};
+
+/**
  * 新增食材
  * @param {Object} foodData - 食材資料
  * @returns {Promise<Object>} 新增的食材
