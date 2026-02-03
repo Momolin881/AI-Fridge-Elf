@@ -55,6 +55,8 @@ class FoodItemUpdate(BaseModel):
     volume_liters: Optional[float] = Field(None, ge=0)
     storage_type: Optional[str] = None
     compartment_id: Optional[int] = None
+    image_url: Optional[str] = Field(None, max_length=512, description="圖片 URL")
+    cloudinary_public_id: Optional[str] = Field(None, max_length=255, description="Cloudinary public_id")
 
     @field_validator("storage_type")
     @classmethod
