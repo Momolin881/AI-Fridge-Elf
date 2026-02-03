@@ -19,11 +19,11 @@ import {
   Typography,
   Space,
   Spin,
-  Popconfirm,
   Image,
   Upload,
+  Modal,
 } from 'antd';
-import { DeleteOutlined, CalendarOutlined, CheckCircleOutlined, CameraOutlined, PictureOutlined } from '@ant-design/icons';
+import { DeleteOutlined, CalendarOutlined, CheckCircleOutlined, CameraOutlined, PictureOutlined, InboxOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getFoodItem, updateFoodItem, deleteFoodItem, archiveFoodItem, getNotificationSettings, uploadFoodImage, getFridge } from '../services/api';
 import { CompartmentSelector, ExpenseCalendarModal } from '../components';
@@ -45,6 +45,7 @@ function EditFoodItem() {
   const [imageUploading, setImageUploading] = useState(false);
   const [fridgeDetail, setFridgeDetail] = useState(null);
   const [currentStorageType, setCurrentStorageType] = useState('冷藏');
+  const [disposalModalVisible, setDisposalModalVisible] = useState(false);
 
   useEffect(() => {
     loadFoodItem();
@@ -150,11 +151,13 @@ function EditFoodItem() {
     }
   };
 
-  const handleArchive = async () => {
+  const handleArchive = async (disposalReason) => {
     try {
       setArchiving(true);
-      await archiveFoodItem(id);
-      message.success('食材已標記為「已處理」！');
+      await archiveFoodItem(id, disposalReason);
+      const reasonText = disposalReason === 'used' ? '用完' : '丟棄';
+      message.success(`食材已標記為「${reasonText}」！`);
+      setDisposalModalVisible(false);
       navigate('/');
     } catch (error) {
       console.error('標記已處理失敗:', error);
@@ -443,28 +446,56 @@ function EditFoodItem() {
                   </Button>
                 </Space>
 
-                <Popconfirm
-                  title="確定要刪除此食材嗎？"
-                  description="此操作無法復原"
-                  onConfirm={handleDelete}
-                  okText="確定刪除"
-                  cancelText="取消"
-                  okButtonProps={{ danger: true }}
+                <Button
+                  icon={<InboxOutlined />}
+                  size="large"
+                  block
+                  onClick={() => setDisposalModalVisible(true)}
+                  style={{ background: '#f0f0f0' }}
                 >
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    loading={deleting}
-                    size="large"
-                    block
-                  >
-                    刪除食材
-                  </Button>
-                </Popconfirm>
+                  移出冰箱
+                </Button>
               </Space>
             </Form.Item>
           </Form>
         </Card>
+
+        {/* 處理方式選擇 Modal */}
+        <Modal
+          title="這項食材怎麼處理了？"
+          open={disposalModalVisible}
+          onCancel={() => setDisposalModalVisible(false)}
+          footer={null}
+          centered
+        >
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<CheckCircleOutlined />}
+              onClick={() => handleArchive('used')}
+              loading={archiving}
+              style={{ height: 60, fontSize: 16 }}
+            >
+              ✅ 已用完（煮掉/吃掉）
+            </Button>
+            <Button
+              danger
+              size="large"
+              block
+              icon={<DeleteOutlined />}
+              onClick={() => handleArchive('wasted')}
+              loading={archiving}
+              style={{ height: 60, fontSize: 16 }}
+            >
+              🗑️ 已丟棄（過期/壞掉）
+            </Button>
+            <div style={{ textAlign: 'center', color: '#999', fontSize: 12 }}>
+              這將幫助計算你節省了多少食材浪費
+            </div>
+          </Space>
+        </Modal>
 
         {/* 消費月曆 Modal */}
         <ExpenseCalendarModal
@@ -474,7 +505,7 @@ function EditFoodItem() {
 
         {/* 提示文字 */}
         <div style={{ textAlign: 'center', padding: '16px', color: '#999', fontSize: 12 }}>
-          在效期前拿出享用的食材，請定期手動刪除
+          食材用完或丢棄时，請點擊「移出冰箱」選擇處理方式
         </div>
       </Content>
     </Layout>

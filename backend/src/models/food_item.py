@@ -51,6 +51,7 @@ class FoodItem(Base):
     status = Column(String(20), default='active', nullable=False, index=True)  # active / archived
     archived_at = Column(DateTime, nullable=True)  # 封存時間
     archived_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 封存者
+    disposal_reason = Column(String(20), nullable=True)  # 處理原因：'used'（用完）或 'wasted'（丟棄）
 
     # 時間戳記
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

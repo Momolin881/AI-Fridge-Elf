@@ -6,7 +6,7 @@
  */
 
 import { Card, Tag, Button, Space, Image } from 'antd';
-import { EditOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, InboxOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 
 const FoodItemCard = ({
@@ -78,9 +78,9 @@ const FoodItemCard = ({
       actions={
         showActions
           ? [
-              <EditOutlined key="edit" onClick={(e) => { e.stopPropagation(); onEdit?.(item); }} />,
-              <DeleteOutlined key="delete" onClick={(e) => { e.stopPropagation(); onDelete?.(item); }} />,
-            ]
+            <EditOutlined key="edit" onClick={(e) => { e.stopPropagation(); onEdit?.(item); }} />,
+            <InboxOutlined key="remove" onClick={(e) => { e.stopPropagation(); onDelete?.(item); }} title="移出冰箱" />,
+          ]
           : undefined
       }
     >

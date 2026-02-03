@@ -17,6 +17,7 @@ from src.schemas.food_item import (
     FoodItemCreate,
     FoodItemUpdate,
     FoodItemResponse,
+    FoodItemArchive,
     AIRecognitionResponse,
 )
 from src.routes.dependencies import DBSession, CurrentUserId
@@ -203,12 +204,17 @@ async def delete_food_item(id: int, db: DBSession, user_id: CurrentUserId):
 
 
 @router.post("/food-items/{id}/archive", response_model=FoodItemResponse)
-async def archive_food_item(id: int, db: DBSession, user_id: CurrentUserId):
+async def archive_food_item(
+    id: int,
+    request: FoodItemArchive,
+    db: DBSession,
+    user_id: CurrentUserId
+):
     """
     封存食材（標記為已處理）
 
     將食材從冰箱清單移除，進入「已處理」歷史紀錄。
-    記錄處理時間和處理人。
+    記錄處理時間、處理人和處理原因（用完/丟棄）。
     """
     # 查詢食材
     food_item = (
@@ -232,11 +238,13 @@ async def archive_food_item(id: int, db: DBSession, user_id: CurrentUserId):
     food_item.status = 'archived'
     food_item.archived_at = datetime.utcnow()
     food_item.archived_by = user_id
+    food_item.disposal_reason = request.disposal_reason
 
     db.commit()
     db.refresh(food_item)
 
-    logger.info(f"使用者 {user_id} 封存食材: {food_item.name} (ID: {food_item.id})")
+    reason_text = "用完" if request.disposal_reason == "used" else "丟棄"
+    logger.info(f"使用者 {user_id} 封存食材: {food_item.name} (ID: {food_item.id}, 原因: {reason_text})")
 
     return _build_food_item_response(food_item)
 

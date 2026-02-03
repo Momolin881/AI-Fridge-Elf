@@ -25,8 +25,8 @@ import {
   Button,
   Popover,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined, BulbOutlined, BookOutlined } from '@ant-design/icons';
-import { getFoodItems, getFridges, deleteFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember, getUserRecipes } from '../services/api';
+import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined, BulbOutlined, BookOutlined, CheckCircleOutlined, DeleteOutlined, InboxOutlined } from '@ant-design/icons';
+import { getFoodItems, getFridges, deleteFoodItem, archiveFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember, getUserRecipes } from '../services/api';
 import { FoodItemCard, VersionFooter, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -48,6 +48,9 @@ function Home() {
   const [members, setMembers] = useState([]);
   const [exportLoading, setExportLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [disposalModalVisible, setDisposalModalVisible] = useState(false);
+  const [selectedItemForDisposal, setSelectedItemForDisposal] = useState(null);
+  const [disposalLoading, setDisposalLoading] = useState(false);
   const [memberModalVisible, setMemberModalVisible] = useState(false);
   const [recipeCategoryCounts, setRecipeCategoryCounts] = useState({ favorites: 0, '常煮': 0, pro: 0 });
 
@@ -142,26 +145,30 @@ function Home() {
     navigate(`/edit/${item.id}`);
   };
 
-  // 處理刪除食材
+  // 處理移出冰箱（顯示選擇 Modal）
   const handleDelete = (item) => {
-    Modal.confirm({
-      title: '確認刪除',
-      icon: <ExclamationCircleOutlined />,
-      content: `確定要刪除「${item.name}」嗎？此操作無法復原。`,
-      okText: '刪除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await deleteFoodItem(item.id);
-          message.success('食材已刪除');
-          await loadData(); // 重新載入資料
-        } catch (error) {
-          console.error('刪除失敗:', error);
-          message.error('刪除失敗，請稍後再試');
-        }
-      },
-    });
+    setSelectedItemForDisposal(item);
+    setDisposalModalVisible(true);
+  };
+
+  // 處理食材處置（用完/丟棄）
+  const handleDisposal = async (disposalReason) => {
+    if (!selectedItemForDisposal) return;
+
+    try {
+      setDisposalLoading(true);
+      await archiveFoodItem(selectedItemForDisposal.id, disposalReason);
+      const reasonText = disposalReason === 'used' ? '用完' : '丟棄';
+      message.success(`「${selectedItemForDisposal.name}」已標記為${reasonText}`);
+      setDisposalModalVisible(false);
+      setSelectedItemForDisposal(null);
+      await loadData();
+    } catch (error) {
+      console.error('處理失敗:', error);
+      message.error('操作失敗，請稍後再試');
+    } finally {
+      setDisposalLoading(false);
+    }
   };
 
   // 計算統計數據
@@ -881,6 +888,46 @@ function Home() {
               </List.Item>
             )}
           />
+        </Modal>
+
+        {/* 處理方式選擇 Modal */}
+        <Modal
+          title={`「${selectedItemForDisposal?.name}」怎麼處理了？`}
+          open={disposalModalVisible}
+          onCancel={() => {
+            setDisposalModalVisible(false);
+            setSelectedItemForDisposal(null);
+          }}
+          footer={null}
+          centered
+        >
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<CheckCircleOutlined />}
+              onClick={() => handleDisposal('used')}
+              loading={disposalLoading}
+              style={{ height: 60, fontSize: 16 }}
+            >
+              ✅ 已用完（煮掉/吃掉）
+            </Button>
+            <Button
+              danger
+              size="large"
+              block
+              icon={<DeleteOutlined />}
+              onClick={() => handleDisposal('wasted')}
+              loading={disposalLoading}
+              style={{ height: 60, fontSize: 16 }}
+            >
+              🗑️ 已丟棄（過期/壞掉）
+            </Button>
+            <div style={{ textAlign: 'center', color: '#999', fontSize: 12 }}>
+              這將幫助計算你節省了多少食材浪費
+            </div>
+          </Space>
         </Modal>
       </Content>
     </Layout>

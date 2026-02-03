@@ -84,6 +84,7 @@ class FoodItemResponse(FoodItemBase):
     status: str = 'active'  # active / archived
     archived_at: Optional[datetime] = None
     archived_by: Optional[int] = None
+    disposal_reason: Optional[str] = None  # 'used'（用完）或 'wasted'（丟棄）
 
     # 計算屬性（由後端填入）
     is_expired: bool = False
@@ -95,8 +96,15 @@ class FoodItemResponse(FoodItemBase):
 class FoodItemArchive(BaseModel):
     """封存食材請求"""
 
-    # 目前不需要額外參數，未來可擴展 reason 欄位
-    pass
+    disposal_reason: str = Field(..., description="處理原因：'used'（用完）或 'wasted'（丟棄）")
+
+    @field_validator("disposal_reason")
+    @classmethod
+    def validate_disposal_reason(cls, v: str) -> str:
+        """驗證 disposal_reason 必須是 'used' 或 'wasted'"""
+        if v not in ["used", "wasted"]:
+            raise ValueError("disposal_reason 必須是 'used' 或 'wasted'")
+        return v
 
 
 class AIRecognitionRequest(BaseModel):

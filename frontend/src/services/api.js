@@ -206,10 +206,11 @@ export const deleteFoodItem = (itemId) => {
 /**
  * 封存食材（標記為已處理）
  * @param {number} itemId - 食材 ID
+ * @param {string} disposalReason - 處理原因：'used'（用完）或 'wasted'（丟棄）
  * @returns {Promise<Object>} 封存後的食材
  */
-export const archiveFoodItem = (itemId) => {
-  return apiClient.post(`/food-items/${itemId}/archive`);
+export const archiveFoodItem = (itemId, disposalReason) => {
+  return apiClient.post(`/food-items/${itemId}/archive`, { disposal_reason: disposalReason });
 };
 
 /**
