@@ -25,7 +25,7 @@ import {
 } from 'antd';
 import { DeleteOutlined, CalendarOutlined, CheckCircleOutlined, CameraOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getFoodItem, updateFoodItem, deleteFoodItem, archiveFoodItem, getNotificationSettings, uploadFoodImage } from '../services/api';
+import { getFoodItem, updateFoodItem, deleteFoodItem, archiveFoodItem, getNotificationSettings, uploadFoodImage, getFridge } from '../services/api';
 import { CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -43,6 +43,8 @@ function EditFoodItem() {
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [expiryWarningDays, setExpiryWarningDays] = useState(3); // 預設 3 天
   const [imageUploading, setImageUploading] = useState(false);
+  const [fridgeDetail, setFridgeDetail] = useState(null);
+  const [currentStorageType, setCurrentStorageType] = useState('冷藏');
 
   useEffect(() => {
     loadFoodItem();
@@ -66,6 +68,17 @@ function EditFoodItem() {
       setLoading(true);
       const data = await getFoodItem(id);
       setFoodItem(data);
+      setCurrentStorageType(data.storage_type || '冷藏');
+
+      // 載入冰箱詳情（包含分區資訊）
+      if (data.fridge_id) {
+        try {
+          const fridge = await getFridge(data.fridge_id);
+          setFridgeDetail(fridge);
+        } catch (e) {
+          console.error('載入冰箱詳情失敗:', e);
+        }
+      }
 
       // 填入表單
       form.setFieldsValue({
@@ -86,6 +99,18 @@ function EditFoodItem() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 根據 storage_type 過濾分區選項
+  const getFilteredCompartments = () => {
+    if (!fridgeDetail?.compartments) return [];
+    return fridgeDetail.compartments
+      .filter((c) => c.parent_type === currentStorageType)
+      .map((c) => ({
+        value: c.id,
+        label: c.name,
+        parent: c.parent_type,
+      }));
   };
 
   const handleSubmit = async (values) => {
@@ -367,16 +392,25 @@ function EditFoodItem() {
               name="storage_type"
               rules={[{ required: true, message: '請選擇儲存類型' }]}
             >
-              <Radio.Group>
+              <Radio.Group onChange={(e) => {
+                setCurrentStorageType(e.target.value);
+                // 切換儲存類型時清空分區選擇
+                form.setFieldValue('compartment_id', null);
+              }}>
                 <Radio value="冷藏">冷藏</Radio>
                 <Radio value="冷凍">冷凍</Radio>
               </Radio.Group>
             </Form.Item>
 
             {/* 分區選擇（細分模式） */}
-            <Form.Item label="分區（可選）" name="compartment_id">
-              <CompartmentSelector fridgeId={foodItem?.fridge_id} />
-            </Form.Item>
+            {fridgeDetail?.compartment_mode === 'detailed' && (
+              <Form.Item label="分區（可選）" name="compartment_id">
+                <CompartmentSelector
+                  mode="detailed"
+                  customCompartments={getFilteredCompartments()}
+                />
+              </Form.Item>
+            )}
 
             {/* 提交按鈕 */}
             <Form.Item style={{ marginTop: 32 }}>
