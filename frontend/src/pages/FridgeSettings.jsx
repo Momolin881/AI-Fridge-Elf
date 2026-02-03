@@ -25,7 +25,7 @@ import {
   InputNumber,
   Radio,
 } from 'antd';
-import { PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 import { getFridges, getFridge, updateFridge, createCompartment, getFoodItems } from '../services/api';
 
 const { Content } = Layout;
@@ -38,7 +38,9 @@ function FridgeSettings() {
   const [selectedFridge, setSelectedFridge] = useState(null);
   const [foodItems, setFoodItems] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [fridgeInfoModalVisible, setFridgeInfoModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [fridgeInfoForm] = Form.useForm();
 
   useEffect(() => {
     loadData();
@@ -83,6 +85,26 @@ function FridgeSettings() {
     }
   };
 
+  const handleUpdateFridgeInfo = async (values) => {
+    try {
+      await updateFridge(selectedFridge.id, values);
+      message.success('更新冰箱資訊成功！');
+      setFridgeInfoModalVisible(false);
+      loadData();
+    } catch (error) {
+      console.error('更新冰箱資訊失敗:', error);
+      message.error('更新失敗，請稍後再試');
+    }
+  };
+
+  const openFridgeInfoModal = () => {
+    fridgeInfoForm.setFieldsValue({
+      model_name: selectedFridge?.model_name || '',
+      total_capacity_liters: selectedFridge?.total_capacity_liters || 300,
+    });
+    setFridgeInfoModalVisible(true);
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 0' }}>
@@ -107,8 +129,15 @@ function FridgeSettings() {
     );
   }
 
-  // 計算容量使用率（簡易估算）
-  const totalVolume = foodItems.reduce((sum, item) => sum + (item.volume_liters || 0), 0);
+  // 計算容量使用率（混合模式）
+  const DEFAULT_ITEM_VOLUME = 0.5; // 預設每件 0.5 公升
+  const itemsWithVolume = foodItems.filter(item => item.volume_liters && item.volume_liters > 0);
+  const itemsWithoutVolume = foodItems.filter(item => !item.volume_liters || item.volume_liters === 0);
+
+  const volumeFromItems = itemsWithVolume.reduce((sum, item) => sum + item.volume_liters, 0);
+  const estimatedVolume = itemsWithoutVolume.length * DEFAULT_ITEM_VOLUME;
+  const totalVolume = volumeFromItems + estimatedVolume;
+
   const usagePercentage = selectedFridge
     ? Math.min(Math.round((totalVolume / selectedFridge.total_capacity_liters) * 100), 100)
     : 0;
@@ -121,7 +150,14 @@ function FridgeSettings() {
           <Title level={3}>冰箱設定</Title>
 
           {/* 冰箱資訊 */}
-          <Card title="冰箱資訊">
+          <Card
+            title="冰箱資訊"
+            extra={
+              <Button type="link" icon={<EditOutlined />} onClick={openFridgeInfoModal}>
+                編輯
+              </Button>
+            }
+          >
             <Space direction="vertical" style={{ width: '100%' }} size="middle">
               <div>
                 <strong>型號：</strong>
@@ -142,13 +178,20 @@ function FridgeSettings() {
                     usagePercentage > 80
                       ? '#ff4d4f'
                       : usagePercentage > 60
-                      ? '#faad14'
-                      : '#52c41a'
+                        ? '#faad14'
+                        : '#52c41a'
                   }
                   status="active"
                 />
-                <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
-                  已使用約 {totalVolume.toFixed(1)} 公升
+                <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                  已使用約 <strong>{totalVolume.toFixed(1)}</strong> 公升
+                </div>
+                <div style={{ marginTop: 4, fontSize: 11, color: '#999', background: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
+                  📊 計算方式：
+                  <br />
+                  • 有設定體積的食材：{itemsWithVolume.length} 件（{volumeFromItems.toFixed(1)}L）
+                  <br />
+                  • 未設定體積的食材：{itemsWithoutVolume.length} 件 × 0.5L ≈ {estimatedVolume.toFixed(1)}L
                 </div>
               </div>
             </Space>
@@ -271,6 +314,52 @@ function FridgeSettings() {
                 </Button>
                 <Button type="primary" htmlType="submit" style={{ flex: 1 }}>
                   新增
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* 編輯冰箱資訊 Modal */}
+        <Modal
+          title="編輯冰箱資訊"
+          open={fridgeInfoModalVisible}
+          onCancel={() => setFridgeInfoModalVisible(false)}
+          footer={null}
+        >
+          <Form form={fridgeInfoForm} layout="vertical" onFinish={handleUpdateFridgeInfo}>
+            <Form.Item
+              label="型號"
+              name="model_name"
+            >
+              <Input placeholder="例如：Panasonic NR-B582TG" size="large" />
+            </Form.Item>
+
+            <Form.Item
+              label="總容量（公升）"
+              name="total_capacity_liters"
+              rules={[{ required: true, message: '請輸入總容量' }]}
+            >
+              <InputNumber
+                min={1}
+                max={2000}
+                placeholder="300"
+                style={{ width: '100%' }}
+                size="large"
+                addonAfter="公升"
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Space style={{ width: '100%' }} size="middle">
+                <Button
+                  onClick={() => setFridgeInfoModalVisible(false)}
+                  style={{ flex: 1 }}
+                >
+                  取消
+                </Button>
+                <Button type="primary" htmlType="submit" style={{ flex: 1 }}>
+                  儲存
                 </Button>
               </Space>
             </Form.Item>

@@ -89,6 +89,7 @@ function EditFoodItem() {
         expiry_date: data.expiry_date ? dayjs(data.expiry_date) : null,
         purchase_date: data.purchase_date ? dayjs(data.purchase_date) : null,
         price: data.price,
+        volume_liters: data.volume_liters,
         storage_type: data.storage_type,
         compartment_id: data.compartment_id,
       });
@@ -384,6 +385,18 @@ function EditFoodItem() {
                   title="查看消費月曆"
                 />
               </Space.Compact>
+            </Form.Item>
+
+            <Form.Item label="體積（公升，選填）" name="volume_liters" tooltip="用於計算冰箱容量使用率，不填則預估 0.5L">
+              <InputNumber
+                min={0}
+                max={100}
+                step={0.1}
+                placeholder="例如：0.5"
+                style={{ width: '100%' }}
+                size="large"
+                addonAfter="公升"
+              />
             </Form.Item>
 
             {/* 儲存類型 */}
