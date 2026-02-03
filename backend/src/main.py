@@ -47,30 +47,29 @@ async def lifespan(app: FastAPI):
 
     # 手動新增可能缺少的欄位（SQLAlchemy create_all 不會修改已存在的表格）
     from sqlalchemy import text
-    from sqlalchemy.exc import ProgrammingError
+    from sqlalchemy.exc import ProgrammingError, InternalError
     
-    with engine.connect() as conn:
-        # 嘗試新增 disposal_reason 欄位
+    # 使用獨立連線處理每個欄位，避免 transaction 錯誤影響其他操作
+    def add_column_if_not_exists(column_name, column_type):
+        """嘗試新增欄位，如果已存在則跳過"""
         try:
-            conn.execute(text("ALTER TABLE food_items ADD COLUMN disposal_reason VARCHAR(20)"))
-            conn.commit()
-            print("已新增 food_items.disposal_reason 欄位")
-        except ProgrammingError as e:
-            if "already exists" in str(e) or "duplicate column" in str(e).lower():
-                print("food_items.disposal_reason 欄位已存在")
+            with engine.connect() as conn:
+                conn.execute(text(f"ALTER TABLE food_items ADD COLUMN {column_name} {column_type}"))
+                conn.commit()
+                print(f"已新增 food_items.{column_name} 欄位")
+                return True
+        except (ProgrammingError, InternalError) as e:
+            # PostgreSQL 會在欄位已存在時拋出錯誤
+            error_str = str(e).lower()
+            if "already exists" in error_str or "duplicate column" in error_str:
+                print(f"food_items.{column_name} 欄位已存在")
             else:
-                print(f"檢查 disposal_reason 欄位: {e}")
-        
-        # 嘗試新增 volume_liters 欄位
-        try:
-            conn.execute(text("ALTER TABLE food_items ADD COLUMN volume_liters FLOAT"))
-            conn.commit()
-            print("已新增 food_items.volume_liters 欄位")
-        except ProgrammingError as e:
-            if "already exists" in str(e) or "duplicate column" in str(e).lower():
-                print("food_items.volume_liters 欄位已存在")
-            else:
-                print(f"檢查 volume_liters 欄位: {e}")
+                print(f"檢查 {column_name} 欄位時發生錯誤: {e}")
+            return False
+    
+    # 逐一新增缺少的欄位
+    add_column_if_not_exists("disposal_reason", "VARCHAR(20)")
+    add_column_if_not_exists("volume_liters", "FLOAT")
 
     # 啟動排程器
     scheduler.start_scheduler()
