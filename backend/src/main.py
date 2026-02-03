@@ -45,6 +45,33 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     print("資料庫表格初始化完成")
 
+    # 手動新增可能缺少的欄位（SQLAlchemy create_all 不會修改已存在的表格）
+    from sqlalchemy import text
+    from sqlalchemy.exc import ProgrammingError
+    
+    with engine.connect() as conn:
+        # 嘗試新增 disposal_reason 欄位
+        try:
+            conn.execute(text("ALTER TABLE food_items ADD COLUMN disposal_reason VARCHAR(20)"))
+            conn.commit()
+            print("已新增 food_items.disposal_reason 欄位")
+        except ProgrammingError as e:
+            if "already exists" in str(e) or "duplicate column" in str(e).lower():
+                print("food_items.disposal_reason 欄位已存在")
+            else:
+                print(f"檢查 disposal_reason 欄位: {e}")
+        
+        # 嘗試新增 volume_liters 欄位
+        try:
+            conn.execute(text("ALTER TABLE food_items ADD COLUMN volume_liters FLOAT"))
+            conn.commit()
+            print("已新增 food_items.volume_liters 欄位")
+        except ProgrammingError as e:
+            if "already exists" in str(e) or "duplicate column" in str(e).lower():
+                print("food_items.volume_liters 欄位已存在")
+            else:
+                print(f"檢查 volume_liters 欄位: {e}")
+
     # 啟動排程器
     scheduler.start_scheduler()
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started")
