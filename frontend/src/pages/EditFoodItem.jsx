@@ -221,33 +221,24 @@ function EditFoodItem() {
         </Title>
 
         <Card>
-          {/* 已處理按鈕 - 只有已過期或即將過期（3天內）的 active 食材才顯示 */}
+          {/* 快速處理按鈕 - 只有已過期或即將過期（3天內）的 active 食材才顯示 */}
           {foodItem?.status !== 'archived' &&
             foodItem?.expiry_date &&
             dayjs(foodItem.expiry_date).diff(dayjs(), 'day') <= expiryWarningDays && (
-              <Popconfirm
-                title="確定要標記為「已處理」嗎？"
-                description="食材將從冰箱清單移除，進入歷史紀錄"
-                onConfirm={handleArchive}
-                okText="確定"
-                cancelText="取消"
-                okButtonProps={{ style: { background: '#52c41a', borderColor: '#52c41a' } }}
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                size="large"
+                block
+                onClick={() => setDisposalModalVisible(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+                  border: 'none',
+                  marginBottom: 16,
+                }}
               >
-                <Button
-                  type="primary"
-                  icon={<CheckCircleOutlined />}
-                  loading={archiving}
-                  size="large"
-                  block
-                  style={{
-                    background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
-                    border: 'none',
-                    marginBottom: 16,
-                  }}
-                >
-                  標記為「已處理」
-                </Button>
-              </Popconfirm>
+                快速處理此食材
+              </Button>
             )}
 
           {/* 已封存提示 */}
