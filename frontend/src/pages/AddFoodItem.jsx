@@ -487,6 +487,18 @@ function AddFoodItem() {
               </div>
             </Form.Item>
 
+            <Form.Item label="體積（公升，選填）" name="volume_liters" tooltip="用於計算冰箱容量使用率，不填則預估 0.5L">
+              <InputNumber
+                min={0}
+                max={100}
+                step={0.1}
+                placeholder="例如：0.5"
+                style={{ width: '100%' }}
+                size="large"
+                addonAfter="公升"
+              />
+            </Form.Item>
+
             {/* 隱藏欄位（AI 辨識用） */}
             <Form.Item name="image_url" hidden>
               <Input />
