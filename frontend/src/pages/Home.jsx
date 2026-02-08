@@ -241,20 +241,44 @@ function Home() {
       groups[compartment].push(item);
     });
 
-    // 按照預定順序排序分區
+    // 按照 sort_order 排序分區
     const sortedGroups = {};
-    compartmentOrder.forEach((compartment) => {
-      if (groups[compartment]) {
-        sortedGroups[compartment] = groups[compartment];
-      }
-    });
+    
+    // 如果有分區資料，按照 sort_order 排序
+    if (fridges.length > 0 && fridges[0].compartments) {
+      const sortedCompartments = fridges[0].compartments
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      
+      sortedCompartments.forEach((compartment) => {
+        if (groups[compartment.name]) {
+          sortedGroups[compartment.name] = groups[compartment.name];
+        }
+      });
+      
+      // 加入未在分區列表中的分組（如未分類）
+      Object.keys(groups).forEach((compartmentName) => {
+        const existsInCompartments = fridges[0].compartments.some(
+          comp => comp.name === compartmentName
+        );
+        if (!existsInCompartments) {
+          sortedGroups[compartmentName] = groups[compartmentName];
+        }
+      });
+    } else {
+      // 沒有分區資料時使用預設排序
+      compartmentOrder.forEach((compartment) => {
+        if (groups[compartment]) {
+          sortedGroups[compartment] = groups[compartment];
+        }
+      });
 
-    // 加入未在預定順序中的分區
-    Object.keys(groups).forEach((compartment) => {
-      if (!compartmentOrder.includes(compartment)) {
-        sortedGroups[compartment] = groups[compartment];
-      }
-    });
+      // 加入未在預定順序中的分區
+      Object.keys(groups).forEach((compartment) => {
+        if (!compartmentOrder.includes(compartment)) {
+          sortedGroups[compartment] = groups[compartment];
+        }
+      });
+    }
 
     return sortedGroups;
   };

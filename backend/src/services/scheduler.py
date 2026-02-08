@@ -15,7 +15,8 @@ from src.database import SessionLocal
 from src.models.notification_settings import NotificationSettings
 from src.models.food_item import FoodItem
 from src.models.fridge import Fridge, FridgeCompartment
-from src.services.line_bot import send_expiry_notification, send_space_warning
+from src.services.line_bot import send_expiry_notification, send_space_warning, LineBot
+from src.services.monthly_stats_service import MonthlyStatsService
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +54,17 @@ def start_scheduler():
             replace_existing=True
         )
 
+        # 註冊每月任務：發送月度省錢統計（每月 1 號早上 10:00 台灣時間執行）
+        scheduler.add_job(
+            send_monthly_stats_to_all_users,
+            trigger=CronTrigger(day=1, hour=10, minute=0, timezone=TAIWAN_TZ),
+            id="send_monthly_stats",
+            name="發送月度省錢統計",
+            replace_existing=True
+        )
+
         scheduler.start()
-        logger.info("排程器已啟動，已註冊 2 個定時任務")
+        logger.info("排程器已啟動，已註冊 3 個定時任務")
 
     except Exception as e:
         logger.error(f"啟動排程器失敗: {e}")
@@ -197,3 +207,48 @@ def check_space_usage():
 
     finally:
         db.close()
+
+
+def send_monthly_stats_to_all_users():
+    """
+    發送月度統計給所有用戶
+    
+    遍歷所有有冰箱的用戶，計算月度統計並發送 LINE 推播通知。
+    """
+    logger.info("開始執行：發送月度省錢統計")
+    
+    try:
+        # 獲取所有用戶的月度統計
+        all_stats = MonthlyStatsService.get_all_users_monthly_stats()
+        
+        if not all_stats:
+            logger.info("沒有用戶需要發送月度統計")
+            return
+        
+        logger.info(f"找到 {len(all_stats)} 位用戶需要發送月度統計")
+        
+        # 初始化 LINE Bot
+        line_bot = LineBot()
+        
+        success_count = 0
+        for stats in all_stats:
+            try:
+                user_id = stats['user_id']
+                
+                # 發送月度統計通知
+                success = line_bot.send_monthly_stats_notification(user_id, stats)
+                
+                if success:
+                    success_count += 1
+                    logger.info(f"月度統計推播發送成功 (user_id: {user_id})")
+                else:
+                    logger.error(f"月度統計推播發送失敗 (user_id: {user_id})")
+                    
+            except Exception as e:
+                logger.error(f"處理用戶 {user_id} 的月度統計推播時發生錯誤: {e}")
+                continue
+        
+        logger.info(f"完成：發送月度省錢統計，成功 {success_count}/{len(all_stats)} 位用戶")
+        
+    except Exception as e:
+        logger.error(f"發送月度統計時發生錯誤: {e}")

@@ -270,6 +270,16 @@ export const createCompartment = (fridgeId, compartmentData) => {
   return apiClient.post(`/fridges/${fridgeId}/compartments`, compartmentData);
 };
 
+/**
+ * 重新排序分區
+ * @param {number} fridgeId - 冰箱 ID
+ * @param {Array} compartmentOrders - 分區排序陣列 [{id, sort_order}, ...]
+ * @returns {Promise<Object>} 更新結果
+ */
+export const reorderCompartments = (fridgeId, compartmentOrders) => {
+  return apiClient.put(`/fridges/${fridgeId}/compartments/reorder`, compartmentOrders);
+};
+
 // ---------- 通知相關 ----------
 
 /**

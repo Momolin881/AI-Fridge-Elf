@@ -81,6 +81,11 @@ async def get_fridge(id: int, db: DBSession, user_id: CurrentUserId):
             status_code=status.HTTP_404_NOT_FOUND, detail="冰箱不存在或無權限存取"
         )
 
+    # 查詢分區並按 sort_order 排序
+    compartments = db.query(FridgeCompartment).filter(
+        FridgeCompartment.fridge_id == id
+    ).order_by(FridgeCompartment.sort_order, FridgeCompartment.created_at).all()
+
     # 返回包含 compartment_mode 的結果
     return {
         "id": fridge.id,
@@ -89,8 +94,8 @@ async def get_fridge(id: int, db: DBSession, user_id: CurrentUserId):
         "total_capacity_liters": fridge.total_capacity_liters,
         "created_at": fridge.created_at,
         "updated_at": fridge.updated_at,
-        "compartment_mode": "detailed" if len(fridge.compartments) > 0 else "simple",
-        "compartments": fridge.compartments,
+        "compartment_mode": "detailed" if len(compartments) > 0 else "simple",
+        "compartments": compartments,
     }
 
 
@@ -146,3 +151,49 @@ async def create_compartment(id: int, data: FridgeCompartmentCreate, db: DBSessi
 
     logger.info(f"使用者 {user_id} 在冰箱 {id} 新增分區: {compartment.name} (ID: {compartment.id})")
     return compartment
+
+
+@router.put("/fridges/{id}/compartments/reorder", status_code=status.HTTP_200_OK)
+async def reorder_compartments(id: int, compartment_orders: list[dict], db: DBSession, user_id: CurrentUserId):
+    """重新排序分區"""
+    # 驗證冰箱所有權
+    fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == user_id).first()
+
+    if not fridge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="冰箱不存在或無權限存取"
+        )
+
+    # 更新分區排序
+    try:
+        for order_data in compartment_orders:
+            compartment_id = order_data.get("id")
+            sort_order = order_data.get("sort_order")
+            
+            if compartment_id is None or sort_order is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="每個分區必須包含 id 和 sort_order"
+                )
+            
+            # 更新分區排序
+            compartment = db.query(FridgeCompartment).filter(
+                FridgeCompartment.id == compartment_id,
+                FridgeCompartment.fridge_id == id
+            ).first()
+            
+            if compartment:
+                compartment.sort_order = sort_order
+
+        db.commit()
+        logger.info(f"使用者 {user_id} 重新排序冰箱 {id} 的分區")
+        
+        return {"message": "分區排序更新成功"}
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"更新分區排序失敗: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="更新分區排序失敗"
+        )

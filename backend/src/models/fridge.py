@@ -50,6 +50,7 @@ class FridgeCompartment(Base):
     name = Column(String(100), nullable=False)  # 分區名稱（如「冷藏上層」、「冷凍抽屜」）
     parent_type = Column(String(50), nullable=False)  # 父類別：「冷藏」或「冷凍」
     capacity_liters = Column(Float, nullable=True)  # 分區容量（可選）
+    sort_order = Column(Integer, nullable=False, default=0)  # 排序順序
 
     # 時間戳記
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

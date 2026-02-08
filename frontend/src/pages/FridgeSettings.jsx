@@ -25,8 +25,8 @@ import {
   InputNumber,
   Radio,
 } from 'antd';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
-import { getFridges, getFridge, updateFridge, createCompartment, getFoodItems } from '../services/api';
+import { PlusOutlined, EditOutlined, MenuOutlined } from '@ant-design/icons';
+import { getFridges, getFridge, updateFridge, createCompartment, getFoodItems, reorderCompartments } from '../services/api';
 
 const { Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -41,6 +41,8 @@ function FridgeSettings() {
   const [fridgeInfoModalVisible, setFridgeInfoModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [fridgeInfoForm] = Form.useForm();
+  const [sortingMode, setSortingMode] = useState(false);
+  const [sortedCompartments, setSortedCompartments] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -103,6 +105,47 @@ function FridgeSettings() {
       total_capacity_liters: selectedFridge?.total_capacity_liters || 300,
     });
     setFridgeInfoModalVisible(true);
+  };
+
+  // 開始排序模式
+  const startSorting = () => {
+    setSortingMode(true);
+    setSortedCompartments([...selectedFridge.compartments]);
+  };
+
+  // 取消排序
+  const cancelSorting = () => {
+    setSortingMode(false);
+    setSortedCompartments([]);
+  };
+
+  // 保存排序
+  const saveSorting = async () => {
+    try {
+      const compartmentOrders = sortedCompartments.map((comp, index) => ({
+        id: comp.id,
+        sort_order: index,
+      }));
+
+      await reorderCompartments(selectedFridge.id, compartmentOrders);
+      message.success('分區排序已保存！');
+      setSortingMode(false);
+      loadData(); // 重新載入資料
+    } catch (error) {
+      console.error('保存排序失敗:', error);
+      message.error('保存排序失敗，請稍後再試');
+    }
+  };
+
+  // 處理拖拽排序
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(sortedCompartments);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setSortedCompartments(items);
   };
 
   if (loading) {
@@ -202,39 +245,126 @@ function FridgeSettings() {
             <Card
               title="分區管理"
               extra={
-                <Button
-                  type="link"
-                  icon={<PlusOutlined />}
-                  onClick={() => setModalVisible(true)}
-                >
-                  新增分區
-                </Button>
+                <Space>
+                  {!sortingMode ? (
+                    <>
+                      <Button
+                        type="link"
+                        onClick={startSorting}
+                      >
+                        調整順序
+                      </Button>
+                      <Button
+                        type="link"
+                        icon={<PlusOutlined />}
+                        onClick={() => setModalVisible(true)}
+                      >
+                        新增分區
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={cancelSorting}
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        type="primary"
+                        onClick={saveSorting}
+                      >
+                        保存順序
+                      </Button>
+                    </>
+                  )}
+                </Space>
               }
             >
-              <List
-                dataSource={selectedFridge.compartments}
-                renderItem={(compartment) => {
-                  const itemsInCompartment = foodItems.filter(
-                    (item) => item.compartment_id === compartment.id
-                  );
+              {sortingMode ? (
+                <div>
+                  <div style={{ marginBottom: 16, color: '#666', fontSize: 14 }}>
+                    💡 拖拽分區可調整順序，完成後點擊「保存順序」
+                  </div>
+                  <List
+                    dataSource={sortedCompartments}
+                    renderItem={(compartment, index) => {
+                      const itemsInCompartment = foodItems.filter(
+                        (item) => item.compartment_id === compartment.id
+                      );
 
-                  return (
-                    <List.Item>
-                      <List.Item.Meta
-                        title={
-                          <Space>
-                            {compartment.name}
-                            <Tag color={compartment.parent_type === '冷藏' ? 'blue' : 'cyan'}>
-                              {compartment.parent_type}
-                            </Tag>
-                          </Space>
-                        }
-                        description={`${itemsInCompartment.length} 項食材`}
-                      />
-                    </List.Item>
-                  );
-                }}
-              />
+                      return (
+                        <List.Item
+                          key={compartment.id}
+                          style={{
+                            cursor: 'move',
+                            border: '1px solid #d9d9d9',
+                            marginBottom: 8,
+                            padding: 12,
+                            borderRadius: 6,
+                          }}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', index);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                            const targetIndex = index;
+                            
+                            if (sourceIndex !== targetIndex) {
+                              const items = Array.from(sortedCompartments);
+                              const [movedItem] = items.splice(sourceIndex, 1);
+                              items.splice(targetIndex, 0, movedItem);
+                              setSortedCompartments(items);
+                            }
+                          }}
+                        >
+                          <MenuOutlined style={{ marginRight: 8, color: '#999' }} />
+                          <List.Item.Meta
+                            title={
+                              <Space>
+                                {compartment.name}
+                                <Tag color={compartment.parent_type === '冷藏' ? 'blue' : 'cyan'}>
+                                  {compartment.parent_type}
+                                </Tag>
+                              </Space>
+                            }
+                            description={`${itemsInCompartment.length} 項食材`}
+                          />
+                        </List.Item>
+                      );
+                    }}
+                  />
+                </div>
+              ) : (
+                <List
+                  dataSource={selectedFridge.compartments}
+                  renderItem={(compartment) => {
+                    const itemsInCompartment = foodItems.filter(
+                      (item) => item.compartment_id === compartment.id
+                    );
+
+                    return (
+                      <List.Item>
+                        <List.Item.Meta
+                          title={
+                            <Space>
+                              {compartment.name}
+                              <Tag color={compartment.parent_type === '冷藏' ? 'blue' : 'cyan'}>
+                                {compartment.parent_type}
+                              </Tag>
+                            </Space>
+                          }
+                          description={`${itemsInCompartment.length} 項食材`}
+                        />
+                      </List.Item>
+                    );
+                  }}
+                />
+              )}
             </Card>
           )}
 
