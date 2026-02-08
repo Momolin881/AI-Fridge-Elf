@@ -57,13 +57,13 @@ const FoodItemCard = ({
           <Image
             alt={item.name}
             src={item.image_url}
-            style={{ height: 200, objectFit: 'cover' }}
+            style={{ height: 150, width: '100%', objectFit: 'cover' }}
             preview={false}
           />
         ) : (
           <div
             style={{
-              height: 200,
+              height: 150,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

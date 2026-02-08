@@ -189,6 +189,18 @@ function Home() {
 
   // 分區排序順序（新版 3 分區）
   const compartmentOrder = ['冷藏上層', '冷藏下層', '冷凍'];
+  
+  // 檢查是否有自設分區（自訂模式）
+  const isCustomMode = () => {
+    if (fridges.length === 0 || !fridges[0].compartments) return false;
+    
+    // 檢查是否有非預設分區
+    const customCompartments = fridges[0].compartments.filter(comp => 
+      !['冷藏上層', '冷藏下層', '冷凍'].includes(comp.name)
+    );
+    
+    return customCompartments.length > 0;
+  };
 
   // 分組和排序食材
   const groupedItems = () => {
@@ -292,12 +304,73 @@ function Home() {
         {/* 統計卡片 */}
         <Card style={{ marginBottom: 16 }}>
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            {/* 冰箱模式標籤 */}
+            {/* 冰箱模式標籤與食譜推薦按鈕 */}
             {fridges.length > 0 && (
-              <div style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0', textAlign: 'right' }}>
-                <Tag color={fridges[0].compartment_mode === 'detailed' ? 'purple' : 'default'}>
-                  {fridges[0].compartment_mode === 'detailed' ? '🗂️ 細分模式' : '📦 簡易模式'}
+              <div style={{ paddingBottom: 12, borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* 左邊：冰箱模式標籤 */}
+                <Tag 
+                  color={
+                    isCustomMode() ? 'gold' : 
+                    (fridges[0].compartment_mode === 'detailed' ? 'purple' : 'default')
+                  }
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate('/settings')}
+                >
+                  {
+                    isCustomMode() ? '🛠️ 自訂模式' :
+                    (fridges[0].compartment_mode === 'detailed' ? '🗂️ 細分模式' : '📦 簡易模式')
+                  }
                 </Tag>
+                
+                {/* 右邊：食譜推薦按鈕 */}
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<BulbOutlined />}
+                  onClick={() => {
+                    // 檢查是否有收藏食譜
+                    const totalRecipes = recipeCategoryCounts.favorites + recipeCategoryCounts['常煮'] + recipeCategoryCounts.pro;
+                    if (totalRecipes === 0) {
+                      // 沒有收藏食譜時，顯示引導訊息
+                      Modal.info({
+                        title: '🍳 食譜推薦功能',
+                        content: (
+                          <div>
+                            <p>歡迎使用智能食譜推薦！</p>
+                            <p>📝 <strong>如何開始：</strong></p>
+                            <p>1. 點選「食譜推薦」查看 AI 建議</p>
+                            <p>2. 將喜歡的食譜加入收藏</p>
+                            <p>3. 收藏的食譜會顯示在這裡</p>
+                          </div>
+                        ),
+                        okText: '前往食譜推薦',
+                        onOk: () => navigate('/recipes/recommendations'),
+                      });
+                    } else {
+                      navigate('/recipes/recommendations');
+                    }
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #52c41a 0%, #faad14 100%)',
+                    border: 'none',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  食譜推薦
+                  {(recipeCategoryCounts.favorites + recipeCategoryCounts['常煮'] + recipeCategoryCounts.pro) > 0 && (
+                    <span style={{ 
+                      marginLeft: 4, 
+                      background: '#fff', 
+                      color: '#52c41a', 
+                      borderRadius: '10px', 
+                      padding: '0 6px', 
+                      fontSize: '11px',
+                      fontWeight: 'bold'
+                    }}>
+                      {recipeCategoryCounts.favorites + recipeCategoryCounts['常煮'] + recipeCategoryCounts.pro}
+                    </span>
+                  )}
+                </Button>
               </div>
             )}
 
@@ -501,12 +574,6 @@ function Home() {
               >
                 匯入
               </Button>
-              <Button
-                icon={<BulbOutlined />}
-                onClick={() => navigate('/recipes/recommendations')}
-              >
-                食譜推薦
-              </Button>
               {/* 食譜分類按鈕 - 只顯示有食譜的分類 */}
               {recipeCategoryCounts.favorites > 0 && (
                 <Button
@@ -681,10 +748,15 @@ function Home() {
                       {isDetailedMode ? `📍 ${groupName}` : groupName}
                     </Title>
 
-                    {/* 食材列表 */}
-                    <List
-                      dataSource={items}
-                      renderItem={(item) => (
+                    {/* 食材列表 - Grid 布局 */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '12px',
+                      }}
+                    >
+                      {items.map((item) => (
                         <FoodItemCard
                           key={item.id}
                           item={item}
@@ -692,8 +764,8 @@ function Home() {
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                         />
-                      )}
-                    />
+                      ))}
+                    </div>
                   </div>
                 ))}
               </Space>

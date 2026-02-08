@@ -11,7 +11,7 @@ const { Text } = Typography;
 function VersionFooter() {
   // 從 Vite define 注入的全域變數
   const gitHash = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'unknown';
-  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
+  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.0';
 
   return (
     <div

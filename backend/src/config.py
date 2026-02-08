@@ -43,7 +43,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = [
         "https://liff.line.me",
         "https://ai-fridge.zeabur.app",
-        "http://localhost:5173",  # 本地開發
+        "http://localhost:5173",  # 本地開發 (vite 預設)
+        "http://localhost:3000",  # 本地開發 (自訂埠號)
     ]
 
     # 排程設定
