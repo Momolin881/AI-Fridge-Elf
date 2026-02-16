@@ -16,8 +16,11 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-# 初始化 OpenAI client
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+# 初始化 OpenAI client（設定全域 timeout）
+client = OpenAI(
+    api_key=settings.OPENAI_API_KEY,
+    timeout=30.0  # 30 秒全域超時
+)
 
 
 def recognize_food_item(image_bytes: bytes) -> dict:
@@ -75,7 +78,7 @@ def recognize_food_item(image_bytes: bytes) -> dict:
 4. 如果無法辨識食材，name 設為「未知食材」，category 設為「其他」，expiry_days 設為 7
 """
 
-        # 呼叫 OpenAI Vision API
+        # 呼叫 OpenAI Vision API（添加 timeout 防止卡住）
         response = client.chat.completions.create(
             model=settings.AI_VISION_MODEL,
             messages=[
@@ -87,7 +90,7 @@ def recognize_food_item(image_bytes: bytes) -> dict:
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/jpeg;base64,{base64_image}",
-                                "detail": "auto",
+                                "detail": "low",  # 改為 low 提高速度
                             },
                         },
                     ],
@@ -95,6 +98,7 @@ def recognize_food_item(image_bytes: bytes) -> dict:
             ],
             max_tokens=settings.AI_VISION_MAX_TOKENS,
             temperature=settings.AI_VISION_TEMPERATURE,
+            timeout=30,  # 30 秒超時
         )
 
         # 解析回應
