@@ -364,21 +364,23 @@ function EditFoodItem() {
               />
             </Form.Item>
 
-            <Form.Item label="價格（台幣）" name="price">
-              <Space.Compact style={{ width: '100%' }}>
-                <InputNumber
-                  min={0}
-                  placeholder="選填"
-                  style={{ width: '100%' }}
-                  size="large"
-                />
+            <Form.Item label="價格（台幣）">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Form.Item name="price" noStyle>
+                  <InputNumber
+                    min={0}
+                    placeholder="選填"
+                    style={{ flex: 1 }}
+                    size="large"
+                  />
+                </Form.Item>
                 <Button
                   size="large"
                   icon={<CalendarOutlined />}
                   onClick={() => setCalendarVisible(true)}
                   title="查看消費月曆"
                 />
-              </Space.Compact>
+              </div>
             </Form.Item>
 
             <Form.Item label="體積（公升，選填）" name="volume_liters" tooltip="用於計算冰箱容量使用率，不填則預估 0.5L">
