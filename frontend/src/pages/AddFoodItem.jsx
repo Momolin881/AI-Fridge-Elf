@@ -47,6 +47,40 @@ function AddFoodItem() {
   const [manualImageUploading, setManualImageUploading] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
 
+  // 圖片壓縮函數（針對手機端優化）
+  const compressImage = (file, maxWidth = 800, quality = 0.8) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // 計算壓縮後尺寸
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxWidth) {
+            width = (width * maxWidth) / height;
+            height = maxWidth;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // 繪製並壓縮
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(resolve, 'image/jpeg', quality);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   useEffect(() => {
     loadFridges();
   }, []);
@@ -119,8 +153,18 @@ function AddFoodItem() {
       setAiRecognizing(true);
       message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
 
-      // 呼叫 AI 辨識 API（使用已驗證的數字）
-      const result = await recognizeFoodImage(file, validFridgeId, effectiveStorageType);
+      // 手機端圖片壓縮（檢查檔案大小）
+      let uploadFile = file;
+      if (file.size > 1024 * 1024) { // 大於 1MB 就壓縮
+        message.loading({ content: '正在壓縮圖片...', key: 'ai-recognition' });
+        uploadFile = await compressImage(file);
+        console.log(`圖片壓縮: ${file.size} → ${uploadFile.size} bytes`);
+      }
+
+      message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
+
+      // 呼叫 AI 辨識 API（使用壓縮後的檔案）
+      const result = await recognizeFoodImage(uploadFile, validFridgeId, effectiveStorageType);
 
       message.success({ content: `辨識成功: ${result.name}`, key: 'ai-recognition' });
 
@@ -141,7 +185,18 @@ function AddFoodItem() {
       setPreviewImageUrl(result.image_url);
     } catch (error) {
       console.error('AI 辨識失敗:', error);
-      message.error({ content: 'AI 辨識失敗，請手動輸入', key: 'ai-recognition' });
+      
+      // 手機調試：顯示詳細錯誤資訊
+      let errorMessage = 'AI 辨識失敗，請手動輸入';
+      if (error.response) {
+        errorMessage += ` (HTTP ${error.response.status})`;
+      } else if (error.request) {
+        errorMessage += ' (網絡錯誤)';
+      } else {
+        errorMessage += ` (${error.message})`;
+      }
+      
+      message.error({ content: errorMessage, key: 'ai-recognition', duration: 5 });
     } finally {
       setAiRecognizing(false);
     }
@@ -161,8 +216,17 @@ function AddFoodItem() {
       setManualImageUploading(true);
       message.loading({ content: '正在上傳圖片...', key: 'manual-upload' });
 
+      // 手機端圖片壓縮
+      let uploadFile = file;
+      if (file.size > 1024 * 1024) { // 大於 1MB 就壓縮
+        message.loading({ content: '正在壓縮圖片...', key: 'manual-upload' });
+        uploadFile = await compressImage(file);
+      }
+
+      message.loading({ content: '正在上傳圖片...', key: 'manual-upload' });
+
       // 上傳圖片（不含 AI 辨識）
-      const result = await uploadFoodImage(file, validFridgeId);
+      const result = await uploadFoodImage(uploadFile, validFridgeId);
 
       // 設定表單欄位
       form.setFieldsValue({
