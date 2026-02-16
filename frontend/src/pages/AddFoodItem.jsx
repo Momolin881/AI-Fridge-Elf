@@ -25,7 +25,7 @@ import {
   Upload,
   Image,
 } from 'antd';
-import { CameraOutlined, FormOutlined, CalendarOutlined, PictureOutlined, DeleteOutlined } from '@ant-design/icons';
+import { CameraOutlined, FormOutlined, CalendarOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getFridges, getFridge, recognizeFoodImage, createFoodItem, uploadFoodImage } from '../services/api';
 import { ImageUploader, CompartmentSelector, ExpenseCalendarModal } from '../components';
@@ -50,34 +50,68 @@ function AddFoodItem() {
   // 圖片壓縮函數（針對手機端優化）
   const compressImage = (file, maxWidth = 800, quality = 0.8) => {
     return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        // 計算壓縮後尺寸
-        let { width, height } = img;
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxWidth) {
-            width = (width * maxWidth) / height;
-            height = maxWidth;
-          }
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        // 確保 Image 建構子存在
+        if (typeof window.Image !== 'function') {
+          throw new Error('Image constructor not available');
         }
+        const img = new window.Image();
         
-        canvas.width = width;
-        canvas.height = height;
+        img.onload = () => {
+          try {
+            // 計算壓縮後尺寸
+            let { width, height } = img;
+            if (width > height) {
+              if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxWidth) {
+                width = (width * maxWidth) / height;
+                height = maxWidth;
+              }
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // 繪製並壓縮
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  // 確保 blob 有正確的檔名和類型
+                  const compressedFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now(),
+                  });
+                  resolve(compressedFile);
+                } else {
+                  resolve(file); // 壓縮失敗，回傳原檔案
+                }
+              },
+              'image/jpeg',
+              quality
+            );
+          } catch (error) {
+            console.error('圖片壓縮過程錯誤:', error);
+            resolve(file); // 錯誤時回傳原檔案
+          }
+        };
         
-        // 繪製並壓縮
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(resolve, 'image/jpeg', quality);
-      };
-      
-      img.src = URL.createObjectURL(file);
+        img.onerror = () => {
+          console.error('圖片載入失敗');
+          resolve(file); // 載入失敗，回傳原檔案
+        };
+        
+        img.src = URL.createObjectURL(file);
+      } catch (error) {
+        console.error('圖片壓縮初始化錯誤:', error);
+        resolve(file); // 初始化失敗，回傳原檔案
+      }
     });
   };
 
@@ -559,7 +593,7 @@ function AddFoodItem() {
                 placeholder="例如：0.5"
                 style={{ width: '100%' }}
                 size="large"
-                addonAfter="公升"
+suffix="公升"
               />
             </Form.Item>
 

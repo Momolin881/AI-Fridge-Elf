@@ -45,27 +45,36 @@ const ImageUploader = ({
 
   // 處理圖片選擇
   const handleImageChange = async (info) => {
-    const file = info.file;
+    try {
+      const file = info.file;
 
-    // 建立預覽 URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImageUrl(e.target.result);
-    };
-    reader.readAsDataURL(file);
+      // 建立預覽 URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImageUrl(e.target.result);
+      };
+      reader.onerror = () => {
+        console.error('檔案讀取失敗');
+        message.error('檔案讀取失敗');
+      };
+      reader.readAsDataURL(file);
 
-    setImageFile(file);
-    onImageSelected?.(file);
+      setImageFile(file);
+      onImageSelected?.(file);
 
-    // 如果有提供 onUpload（外部自訂處理），優先使用
-    if (onUpload) {
-      await onUpload(file);
-      return;
-    }
+      // 如果有提供 onUpload（外部自訂處理），優先使用
+      if (onUpload) {
+        await onUpload(file);
+        return;
+      }
 
-    // 否則，如果啟用自動辨識，立即辨識
-    if (autoRecognize) {
-      await recognizeImage(file);
+      // 否則，如果啟用自動辨識，立即辨識
+      if (autoRecognize) {
+        await recognizeImage(file);
+      }
+    } catch (error) {
+      console.error('圖片處理錯誤:', error);
+      message.error('圖片處理失敗，請重試');
     }
   };
 
