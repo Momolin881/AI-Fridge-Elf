@@ -297,32 +297,49 @@ async def recognize_food_item(
         # 上傳至 Cloudinary
         upload_result = storage.upload_image(image_bytes, folder="food_items")
 
-        # AI 辨識
-        ai_result = ai_vision.recognize_food_item(image_bytes)
-
-        # 計算效期
-        expiry_date = ai_vision.calculate_expiry_date(ai_result["expiry_days"])
-
-        # 組裝回應
-        response = AIRecognitionResponse(
-            name=ai_result["name"],
-            category=ai_result.get("category"),
-            quantity=ai_result.get("quantity", 1),
-            unit=ai_result.get("unit"),
-            expiry_date=expiry_date,
-            storage_type=storage_type,
-            image_url=upload_result["url"],
-            cloudinary_public_id=upload_result["public_id"],
-        )
-
-        logger.info(f"使用者 {user_id} AI 辨識食材成功: {response.name}")
-        return response
+        # 嘗試 AI 辨識
+        try:
+            ai_result = ai_vision.recognize_food_item(image_bytes)
+            expiry_date = ai_vision.calculate_expiry_date(ai_result["expiry_days"])
+            
+            # AI 辨識成功 - 返回完整資訊
+            response = AIRecognitionResponse(
+                name=ai_result["name"],
+                category=ai_result.get("category"),
+                quantity=ai_result.get("quantity", 1),
+                unit=ai_result.get("unit"),
+                expiry_date=expiry_date,
+                storage_type=storage_type,
+                image_url=upload_result["url"],
+                cloudinary_public_id=upload_result["public_id"],
+            )
+            
+            logger.info(f"使用者 {user_id} AI 辨識食材成功: {response.name}")
+            return response
+            
+        except Exception as ai_error:
+            # AI 辨識失敗但圖片上傳成功 - 返回圖片資訊和預設值
+            logger.warning(f"AI 辨識失敗但保留圖片: {ai_error}")
+            
+            response = AIRecognitionResponse(
+                name="未識別食材",
+                category="其他",
+                quantity=1,
+                unit=None,
+                expiry_date=ai_vision.calculate_expiry_date(7),  # 預設 7 天
+                storage_type=storage_type,
+                image_url=upload_result["url"],
+                cloudinary_public_id=upload_result["public_id"],
+            )
+            
+            logger.info(f"使用者 {user_id} AI 辨識失敗但圖片上傳成功，返回預設值")
+            return response
 
     except Exception as e:
-        logger.error(f"AI 辨識失敗: {e}")
+        logger.error(f"圖片上傳失敗: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AI 辨識失敗: {str(e)}",
+            detail=f"圖片上傳失敗: {str(e)}",
         ) from e
 
 
