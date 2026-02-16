@@ -37,13 +37,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    minify: 'esbuild', // 使用 esbuild 而非 terser，避免過度壓縮導致的問題
+    target: 'es2015', // 確保兼容性
     // 移除 manualChunks 配置，讓 Vite 自動處理代碼分割
     // 避免模塊載入順序問題導致的 "Cannot read properties of undefined" 錯誤
   },

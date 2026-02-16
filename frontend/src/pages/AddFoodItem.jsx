@@ -47,72 +47,21 @@ function AddFoodItem() {
   const [manualImageUploading, setManualImageUploading] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
 
-  // 圖片壓縮函數（針對手機端優化）
-  const compressImage = (file, maxWidth = 800, quality = 0.8) => {
-    return new Promise((resolve) => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        // 確保 Image 建構子存在
-        if (typeof window.Image !== 'function') {
-          throw new Error('Image constructor not available');
-        }
-        const img = new window.Image();
-        
-        img.onload = () => {
-          try {
-            // 計算壓縮後尺寸
-            let { width, height } = img;
-            if (width > height) {
-              if (width > maxWidth) {
-                height = (height * maxWidth) / width;
-                width = maxWidth;
-              }
-            } else {
-              if (height > maxWidth) {
-                width = (width * maxWidth) / height;
-                height = maxWidth;
-              }
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            
-            // 繪製並壓縮
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob(
-              (blob) => {
-                if (blob) {
-                  // 確保 blob 有正確的檔名和類型
-                  const compressedFile = new File([blob], file.name, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now(),
-                  });
-                  resolve(compressedFile);
-                } else {
-                  resolve(file); // 壓縮失敗，回傳原檔案
-                }
-              },
-              'image/jpeg',
-              quality
-            );
-          } catch (error) {
-            console.error('圖片壓縮過程錯誤:', error);
-            resolve(file); // 錯誤時回傳原檔案
-          }
-        };
-        
-        img.onerror = () => {
-          console.error('圖片載入失敗');
-          resolve(file); // 載入失敗，回傳原檔案
-        };
-        
-        img.src = URL.createObjectURL(file);
-      } catch (error) {
-        console.error('圖片壓縮初始化錯誤:', error);
-        resolve(file); // 初始化失敗，回傳原檔案
+  // 簡化的圖片處理函數（避免壓縮導致的問題）
+  const processImage = async (file) => {
+    try {
+      // 如果檔案太大（超過 5MB），提醒使用者
+      if (file.size > 5 * 1024 * 1024) {
+        message.warning('圖片檔案較大，可能影響上傳速度');
       }
-    });
+      
+      // 直接回傳原檔案，不進行壓縮
+      // 讓後端處理圖片大小和格式問題
+      return file;
+    } catch (error) {
+      console.error('圖片處理錯誤:', error);
+      return file;
+    }
   };
 
   useEffect(() => {
@@ -187,18 +136,8 @@ function AddFoodItem() {
       setAiRecognizing(true);
       message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
 
-      // 手機端圖片壓縮（檢查檔案大小）
-      let uploadFile = file;
-      if (file.size > 1024 * 1024) { // 大於 1MB 就壓縮
-        message.loading({ content: '正在壓縮圖片...', key: 'ai-recognition' });
-        uploadFile = await compressImage(file);
-        console.log(`圖片壓縮: ${file.size} → ${uploadFile.size} bytes`);
-      }
-
-      message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
-
-      // 呼叫 AI 辨識 API（使用壓縮後的檔案）
-      const result = await recognizeFoodImage(uploadFile, validFridgeId, effectiveStorageType);
+      // 呼叫 AI 辨識 API（直接使用原檔案）
+      const result = await recognizeFoodImage(file, validFridgeId, effectiveStorageType);
 
       message.success({ content: `辨識成功: ${result.name}`, key: 'ai-recognition' });
 
@@ -250,17 +189,8 @@ function AddFoodItem() {
       setManualImageUploading(true);
       message.loading({ content: '正在上傳圖片...', key: 'manual-upload' });
 
-      // 手機端圖片壓縮
-      let uploadFile = file;
-      if (file.size > 1024 * 1024) { // 大於 1MB 就壓縮
-        message.loading({ content: '正在壓縮圖片...', key: 'manual-upload' });
-        uploadFile = await compressImage(file);
-      }
-
-      message.loading({ content: '正在上傳圖片...', key: 'manual-upload' });
-
-      // 上傳圖片（不含 AI 辨識）
-      const result = await uploadFoodImage(uploadFile, validFridgeId);
+      // 上傳圖片（不含 AI 辨識，直接使用原檔案）
+      const result = await uploadFoodImage(file, validFridgeId);
 
       // 設定表單欄位
       form.setFieldsValue({
