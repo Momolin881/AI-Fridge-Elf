@@ -17,14 +17,17 @@ import {
   message,
   Spin,
   Typography,
-  Space
+  Space,
+  Select
 } from 'antd';
 import {
   BellOutlined,
   ClockCircleOutlined,
   DollarOutlined,
   ArrowLeftOutlined,
-  SendOutlined
+  SendOutlined,
+  BarChartOutlined,
+  CalendarOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getNotificationSettings, updateNotificationSettings, testExpiryNotification } from '../services/api';
@@ -53,6 +56,9 @@ function NotificationSettings() {
         expiry_warning_days: settings.expiry_warning_days,
         budget_warning_enabled: settings.budget_warning_enabled ?? false,
         budget_warning_amount: settings.budget_warning_amount ?? 5000,
+        weekly_report_enabled: settings.weekly_report_enabled ?? true,
+        weekly_report_frequency: settings.weekly_report_frequency ?? 'weekly',
+        monthly_report_enabled: settings.monthly_report_enabled ?? true,
         notification_time: settings.notification_time ? dayjs(settings.notification_time, 'HH:mm') : dayjs('09:00', 'HH:mm')
       });
 
@@ -74,6 +80,9 @@ function NotificationSettings() {
         expiry_warning_days: values.expiry_warning_days,
         budget_warning_enabled: values.budget_warning_enabled,
         budget_warning_amount: values.budget_warning_amount,
+        weekly_report_enabled: values.weekly_report_enabled,
+        weekly_report_frequency: values.weekly_report_frequency,
+        monthly_report_enabled: values.monthly_report_enabled,
         notification_time: values.notification_time.format('HH:mm')
       };
 
@@ -148,6 +157,9 @@ function NotificationSettings() {
           expiry_warning_days: 3,
           budget_warning_enabled: false,
           budget_warning_amount: 5000,
+          weekly_report_enabled: true,
+          weekly_report_frequency: 'weekly',
+          monthly_report_enabled: true,
           notification_time: dayjs('09:00', 'HH:mm')
         }}
       >
@@ -213,6 +225,88 @@ function NotificationSettings() {
           </Form.Item>
         </Card>
 
+        {/* 週報設定 */}
+        <Card
+          title={
+            <Space>
+              <BarChartOutlined style={{ color: '#722ed1' }} />
+              <span>週效率報告</span>
+            </Space>
+          }
+          style={{ marginBottom: '16px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <Text strong>啟用週報</Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                每週分析食材使用效率和省錢統計
+              </Text>
+            </div>
+            <Form.Item
+              name="weekly_report_enabled"
+              valuePropName="checked"
+              style={{ marginBottom: 0 }}
+            >
+              <Switch />
+            </Form.Item>
+          </div>
+
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) =>
+              prevValues.weekly_report_enabled !== currentValues.weekly_report_enabled
+            }
+          >
+            {({ getFieldValue }) =>
+              getFieldValue('weekly_report_enabled') ? (
+                <Form.Item
+                  name="weekly_report_frequency"
+                  label="發送頻率"
+                  help="選擇接收週報的頻率"
+                >
+                  <Select
+                    style={{ width: '100%' }}
+                    options={[
+                      { value: 'weekly', label: '每週發送' },
+                      { value: 'biweekly', label: '雙週發送' },
+                      { value: 'monthly', label: '每月發送' }
+                    ]}
+                  />
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
+        </Card>
+
+        {/* 月報設定 */}
+        <Card
+          title={
+            <Space>
+              <CalendarOutlined style={{ color: '#f5222d' }} />
+              <span>月度省錢統計</span>
+            </Space>
+          }
+          style={{ marginBottom: '16px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <Text strong>啟用月報</Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                每月總結省錢成果和改進建議
+              </Text>
+            </div>
+            <Form.Item
+              name="monthly_report_enabled"
+              valuePropName="checked"
+              style={{ marginBottom: 0 }}
+            >
+              <Switch />
+            </Form.Item>
+          </div>
+        </Card>
+
         {/* 月消費金額提醒 */}
         <Card
           title={
@@ -258,7 +352,7 @@ function NotificationSettings() {
                     max={100000}
                     step={500}
                     style={{ width: '100%' }}
-                    addonBefore="NT$"
+                    prefix="NT$"
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
                   />
