@@ -35,6 +35,13 @@ class NotificationSettings(Base):
     budget_warning_enabled = Column(Boolean, default=False, nullable=False)
     budget_warning_amount = Column(Integer, default=5000, nullable=False)  # 月消費上限（預設 5000）
 
+    # 週報設定
+    weekly_report_enabled = Column(Boolean, default=True, nullable=False)  # 週報開關
+    weekly_report_frequency = Column(String(20), default="weekly", nullable=False)  # "weekly", "biweekly", "monthly"
+
+    # 月報設定  
+    monthly_report_enabled = Column(Boolean, default=True, nullable=False)  # 月報開關
+
     # 通知時間設定
     notification_time = Column(Time, default=time(9, 0), nullable=False)  # 預設早上 9:00
 

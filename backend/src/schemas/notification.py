@@ -30,6 +30,13 @@ class NotificationSettingsResponse(BaseModel):
     budget_warning_enabled: bool = Field(default=False, description="是否啟用預算提醒")
     budget_warning_amount: int = Field(default=5000, ge=0, description="月消費上限")
 
+    # 週報設定
+    weekly_report_enabled: bool = Field(default=True, description="是否啟用週報")
+    weekly_report_frequency: str = Field(default="weekly", description="週報頻率")
+
+    # 月報設定  
+    monthly_report_enabled: bool = Field(default=True, description="是否啟用月報")
+
     # 通知時間設定
     notification_time: str = Field(default="09:00", description="通知時間（HH:MM 格式）")
 
@@ -62,6 +69,9 @@ class NotificationSettingsResponse(BaseModel):
                 "space_warning_threshold": 80,
                 "budget_warning_enabled": False,
                 "budget_warning_amount": 5000,
+                "weekly_report_enabled": True,
+                "weekly_report_frequency": "weekly",
+                "monthly_report_enabled": True,
                 "notification_time": "09:00"
             }
         }
@@ -87,8 +97,26 @@ class NotificationSettingsUpdate(BaseModel):
     budget_warning_enabled: bool | None = Field(None, description="是否啟用預算提醒")
     budget_warning_amount: int | None = Field(None, ge=0, description="月消費上限")
 
+    # 週報設定
+    weekly_report_enabled: bool | None = Field(None, description="是否啟用週報")
+    weekly_report_frequency: str | None = Field(None, description="週報頻率")
+
+    # 月報設定
+    monthly_report_enabled: bool | None = Field(None, description="是否啟用月報")
+
     # 通知時間設定
     notification_time: str | None = Field(None, description="通知時間（HH:MM 格式）")
+
+    @field_validator("weekly_report_frequency")
+    @classmethod
+    def validate_weekly_report_frequency(cls, v):
+        """驗證週報頻率"""
+        if v is None:
+            return v
+        allowed_frequencies = ["weekly", "biweekly", "monthly"]
+        if v not in allowed_frequencies:
+            raise ValueError(f"weekly_report_frequency 必須是 {allowed_frequencies} 其中之一")
+        return v
 
     @field_validator("notification_time")
     @classmethod
@@ -109,6 +137,9 @@ class NotificationSettingsUpdate(BaseModel):
                 "expiry_warning_enabled": True,
                 "expiry_warning_days": 5,
                 "space_warning_threshold": 75,
+                "weekly_report_enabled": True,
+                "weekly_report_frequency": "weekly",
+                "monthly_report_enabled": True,
                 "notification_time": "10:30"
             }
         }

@@ -17,6 +17,7 @@ from src.models.food_item import FoodItem
 from src.models.fridge import Fridge, FridgeCompartment
 from src.services.line_bot import send_expiry_notification, send_space_warning, LineBot
 from src.services.monthly_stats_service import MonthlyStatsService
+from src.services.weekly_stats_service import generate_weekly_report_message
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,15 @@ def start_scheduler():
             replace_existing=True
         )
 
+        # 註冊週報任務：發送週統計報告（每週日早上 9:30 台灣時間執行）
+        scheduler.add_job(
+            send_weekly_reports_to_all_users,
+            trigger=CronTrigger(day_of_week=6, hour=9, minute=30, timezone=TAIWAN_TZ),  # 6=週日
+            id="send_weekly_reports", 
+            name="發送週統計報告",
+            replace_existing=True
+        )
+
         # 註冊每月任務：發送月度省錢統計（每月 1 號早上 10:00 台灣時間執行）
         scheduler.add_job(
             send_monthly_stats_to_all_users,
@@ -64,7 +74,7 @@ def start_scheduler():
         )
 
         scheduler.start()
-        logger.info("排程器已啟動，已註冊 3 個定時任務")
+        logger.info("排程器已啟動，已註冊 4 個定時任務")
 
     except Exception as e:
         logger.error(f"啟動排程器失敗: {e}")
@@ -205,6 +215,67 @@ def check_space_usage():
     except Exception as e:
         logger.error(f"檢查冰箱空間使用率時發生錯誤: {e}")
 
+    finally:
+        db.close()
+
+
+def send_weekly_reports_to_all_users():
+    """
+    發送週報給所有啟用週報的用戶
+    
+    遍歷所有啟用週報的用戶，根據其頻率設定決定是否發送週報。
+    """
+    logger.info("開始執行：發送週統計報告")
+    db = SessionLocal()
+    
+    try:
+        # 查詢所有啟用週報的通知設定
+        settings_list = db.query(NotificationSettings).filter(
+            NotificationSettings.weekly_report_enabled == True
+        ).all()
+        
+        if not settings_list:
+            logger.info("沒有用戶啟用週報")
+            return
+            
+        logger.info(f"找到 {len(settings_list)} 位用戶啟用週報")
+        
+        # 初始化 LINE Bot
+        line_bot = LineBot()
+        
+        success_count = 0
+        for settings in settings_list:
+            try:
+                user_id = settings.user_id
+                
+                # 檢查頻率設定 (暫時都發送，後續可根據頻率優化)
+                frequency = settings.weekly_report_frequency
+                logger.info(f"用戶 {user_id} 的週報頻率設定: {frequency}")
+                
+                # 生成週報訊息
+                weekly_message = generate_weekly_report_message(user_id, db)
+                
+                if weekly_message:
+                    # 發送週報通知
+                    success = line_bot.send_text_message(settings.user.line_user_id, weekly_message)
+                    
+                    if success:
+                        success_count += 1
+                        logger.info(f"週報推播發送成功 (user_id: {user_id})")
+                    else:
+                        logger.error(f"週報推播發送失敗 (user_id: {user_id})")
+                else:
+                    logger.info(f"用戶 {user_id} 本週無數據，跳過發送")
+                    
+            except Exception as e:
+                logger.error(f"處理用戶 {user_id} 的週報推播時發生錯誤: {e}")
+                continue
+        
+        logger.info(f"完成：發送週統計報告，成功 {success_count}/{len(settings_list)} 位用戶")
+        
+    except Exception as e:
+        logger.error(f"發送週報時發生錯誤: {e}")
+    
     finally:
         db.close()
 
