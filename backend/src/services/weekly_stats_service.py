@@ -123,6 +123,159 @@ def calculate_weekly_usage_stats(user_id: int, db: Session, weeks_back: int = 0)
         }
 
 
+def is_first_week_user(user_id: int, db: Session) -> bool:
+    """
+    檢測使用者是否為新手（註冊7天內）
+    
+    Args:
+        user_id: 使用者 ID
+        db: 資料庫 session
+        
+    Returns:
+        是否為新手使用者
+    """
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return False
+            
+        # 計算註冊天數
+        days_since_register = (datetime.now() - user.created_at).days
+        return days_since_register <= 7
+        
+    except Exception as e:
+        logger.error(f"檢測新手狀態失敗 (user_id: {user_id}): {e}")
+        return False
+
+
+def detect_first_week_achievements(user_id: int, stats: Dict, db: Session) -> List[str]:
+    """
+    檢測新手首週成就
+    
+    Args:
+        user_id: 使用者 ID  
+        stats: 週統計數據
+        db: 資料庫 session
+        
+    Returns:
+        成就列表
+    """
+    achievements = []
+    
+    try:
+        # 檢查是否有拍照（有食材記錄）
+        if stats["total_processed"] > 0:
+            achievements.append("📸 食材管理新星 - 你已經開始省錢之路！")
+        
+        # 檢查是否有使用食材
+        if stats["used_count"] > 0:
+            achievements.append("🎯 行動派達人 - 立刻使用食材，零拖延！")
+        
+        # 檢查使用效率
+        if stats["usage_rate"] >= 80:
+            achievements.append("⭐ 效率大師 - 使用率超高，太厲害了！")
+        elif stats["usage_rate"] >= 50:
+            achievements.append("⭐ 效率新手 - 使用率超過一半，很棒的開始！")
+        
+        # 檢查是否有省錢
+        if stats["saved_money"] > 0:
+            achievements.append("💰 省錢達人 - 成功避免浪費，為自己加分！")
+        
+        # 檢查及時使用率
+        if stats["timely_usage_rate"] >= 90:
+            achievements.append("⏰ 時間管理大師 - 在效期內完美使用！")
+        
+        # 特殊鼓勵（即使數據不多也給成就感）
+        if len(achievements) == 0:
+            achievements.append("🌟 勇敢開始者 - 踏出食材管理的第一步就是成功！")
+            
+    except Exception as e:
+        logger.error(f"檢測新手成就失敗 (user_id: {user_id}): {e}")
+        achievements = ["🌟 新手冰友 - 歡迎加入AI冰箱精靈大家庭！"]
+    
+    return achievements
+
+
+def generate_newbie_celebration_report(user_id: int, stats: Dict, db: Session) -> str:
+    """
+    生成新手專屬慶祝版週報
+    
+    Args:
+        user_id: 使用者 ID
+        stats: 週統計數據  
+        db: 資料庫 session
+        
+    Returns:
+        新手慶祝版週報訊息
+    """
+    try:
+        # 檢測成就
+        achievements = detect_first_week_achievements(user_id, stats, db)
+        
+        # 組成慶祝訊息
+        message_parts = [
+            "🎊✨ 【新手專屬】首週成就慶典 ✨🎊",
+            f"📅 {stats['week_start']} ~ {stats['week_end']}",
+            "",
+            "🏆 恭喜解鎖以下成就：",
+        ]
+        
+        # 加入成就列表
+        for achievement in achievements:
+            message_parts.append(f"   {achievement}")
+        
+        message_parts.extend([
+            "",
+            "🌟 本週亮點數據：",
+        ])
+        
+        # 根據數據情況調整顯示
+        if stats["total_processed"] > 0:
+            message_parts.append(f"• 成功管理 {stats['total_processed']} 項食材")
+            message_parts.append(f"• 使用效率 {stats['usage_rate']}% (新手中的佼佼者！)")
+            
+            if stats["saved_money"] > 0:
+                message_parts.append(f"• 省下 ${int(stats['saved_money'])} (超棒的開始！)")
+                
+            if stats["wasted_count"] == 0:
+                message_parts.append("• 零浪費達成！環保小天使就是你！")
+        else:
+            message_parts.extend([
+                "• 已經開始設定食材管理",
+                "• 準備迎接精彩的省錢之旅",
+            ])
+        
+        # 新手特殊獎勵和鼓勵
+        message_parts.extend([
+            "",
+            "💎 新手特殊獎勵：",
+            "✅ 獲得專屬新手稱號",
+            "✅ 解鎖更多進階功能",
+            "✅ 下週數據會更精彩！",
+            "",
+            "👑 你已經超越了很多同期新用戶！",
+            "🚀 繼續保持這個好習慣，下週挑戰更多成就！",
+            "",
+            "🌱 繼續加油，你就是下一個省錢大師！(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        ])
+        
+        return "\n".join(message_parts)
+        
+    except Exception as e:
+        logger.error(f"生成新手慶祝週報失敗 (user_id: {user_id}): {e}")
+        # 失敗時回傳簡單版本
+        return "\n".join([
+            "🎊 【新手專屬】首週慶祝 🎊",
+            "",
+            "🌟 恭喜你踏出食材管理的第一步！",
+            "雖然數據還在累積中，但開始就是最棒的成就！",
+            "",
+            "🚀 下週讓我們一起創造更多精彩的省錢故事！",
+            "",
+            "歡迎來到AI冰箱精靈大家庭！(´∀｀)♡"
+        ])
+
+
 def get_weekly_insights(stats: Dict) -> List[str]:
     """
     根據週統計生成洞察和建議
@@ -179,7 +332,7 @@ def get_weekly_insights(stats: Dict) -> List[str]:
 
 def generate_weekly_report_message(user_id: int, db: Session) -> Optional[str]:
     """
-    生成週報推播訊息
+    生成週報推播訊息（支援新手特殊版本）
     
     Args:
         user_id: 使用者 ID
@@ -192,9 +345,37 @@ def generate_weekly_report_message(user_id: int, db: Session) -> Optional[str]:
         # 獲取本週統計
         stats = calculate_weekly_usage_stats(user_id, db, weeks_back=0)
         
-        if stats["total_processed"] == 0:
-            return None  # 沒有數據就不發送
+        # 檢查是否為新手用戶
+        if is_first_week_user(user_id, db):
+            logger.info(f"生成新手專屬週報 (user_id: {user_id})")
+            # 新手即使沒有數據也要發送鼓勵週報
+            return generate_newbie_celebration_report(user_id, stats, db)
         
+        # 一般用戶：沒有數據就不發送
+        if stats["total_processed"] == 0:
+            return None
+        
+        # 一般用戶的週報邏輯
+        return generate_regular_weekly_report(user_id, stats, db)
+        
+    except Exception as e:
+        logger.error(f"生成週報訊息失敗 (user_id: {user_id}): {e}")
+        return None
+
+
+def generate_regular_weekly_report(user_id: int, stats: Dict, db: Session) -> str:
+    """
+    生成一般用戶的週報訊息
+    
+    Args:
+        user_id: 使用者 ID
+        stats: 週統計數據
+        db: 資料庫 session
+        
+    Returns:
+        一般週報訊息文字
+    """
+    try:
         # 獲取洞察
         insights = get_weekly_insights(stats)
         
@@ -229,5 +410,5 @@ def generate_weekly_report_message(user_id: int, db: Session) -> Optional[str]:
         return "\n".join(message_parts)
         
     except Exception as e:
-        logger.error(f"生成週報訊息失敗: {e}")
+        logger.error(f"生成一般週報失敗 (user_id: {user_id}): {e}")
         return None
