@@ -187,7 +187,7 @@ def detect_first_week_achievements(user_id: int, stats: Dict, db: Session) -> Li
         
         # 特殊鼓勵（即使數據不多也給成就感）
         if len(achievements) == 0:
-            achievements.append("🌟 勇敢開始者 - 踏出食材管理的第一步就是成功！")
+            achievements.append("🌟 勇敢開始者 - 拍食材就是成功的第一步，欣梅爾也會這樣做的！")
             
     except Exception as e:
         logger.error(f"檢測新手成就失敗 (user_id: {user_id}): {e}")
