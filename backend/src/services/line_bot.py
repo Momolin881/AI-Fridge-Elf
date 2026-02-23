@@ -254,6 +254,19 @@ class LineBot:
     def __init__(self):
         self.api = line_bot_api
     
+    def send_text_message(self, user_id: str, text: str) -> bool:
+        """
+        發送文字訊息給指定使用者（實例方法，委派給模組級函式）
+        
+        Args:
+            user_id: LINE User ID
+            text: 要發送的文字訊息
+            
+        Returns:
+            bool: 發送成功返回 True，失敗返回 False
+        """
+        return send_text_message(user_id, text)
+    
     async def send_monthly_stats_notification(self, user_id: int, stats: dict) -> bool:
         """
         發送月度省錢統計推播

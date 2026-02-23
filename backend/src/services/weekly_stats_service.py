@@ -7,6 +7,7 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 
@@ -15,6 +16,9 @@ from src.models.fridge import Fridge
 from src.models.user import User
 
 logger = logging.getLogger(__name__)
+
+# 台灣時區
+TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 
 
 def calculate_weekly_usage_stats(user_id: int, db: Session, weeks_back: int = 0) -> Dict:
@@ -31,7 +35,7 @@ def calculate_weekly_usage_stats(user_id: int, db: Session, weeks_back: int = 0)
     """
     try:
         # 計算週的開始和結束時間 (週一到週日)
-        today = datetime.now().date()
+        today = datetime.now(TAIWAN_TZ).date()
         days_since_monday = today.weekday()  # 0=週一, 6=週日
         
         # 計算目標週的週一和週日
@@ -140,7 +144,7 @@ def is_first_week_user(user_id: int, db: Session) -> bool:
             return False
             
         # 計算註冊天數
-        days_since_register = (datetime.now() - user.created_at).days
+        days_since_register = (datetime.now(TAIWAN_TZ) - user.created_at.replace(tzinfo=TAIWAN_TZ)).days
         return days_since_register <= 7
         
     except Exception as e:

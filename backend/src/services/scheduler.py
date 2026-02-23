@@ -244,13 +244,25 @@ def send_weekly_reports_to_all_users():
         line_bot = LineBot()
         
         success_count = 0
+        today_taiwan = datetime.now(TAIWAN_TZ).date()
+        iso_week = today_taiwan.isocalendar()[1]  # ISO 週數
+        
         for settings in settings_list:
             try:
                 user_id = settings.user_id
                 
-                # 檢查頻率設定 (暫時都發送，後續可根據頻率優化)
+                # 根據頻率設定決定是否發送
                 frequency = settings.weekly_report_frequency
                 logger.info(f"用戶 {user_id} 的週報頻率設定: {frequency}")
+                
+                if frequency == "biweekly" and iso_week % 2 != 0:
+                    # 雙週發送：只在偶數 ISO 週發送
+                    logger.info(f"用戶 {user_id} 設定雙週發送，本週(第{iso_week}週)為奇數週，跳過")
+                    continue
+                elif frequency == "monthly" and today_taiwan.day > 7:
+                    # 每月發送：只在每月第一個週日發送（日期 <= 7）
+                    logger.info(f"用戶 {user_id} 設定每月發送，本週非當月第一個週日，跳過")
+                    continue
                 
                 # 生成週報訊息
                 weekly_message = generate_weekly_report_message(user_id, db)
