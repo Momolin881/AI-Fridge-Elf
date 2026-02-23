@@ -108,6 +108,19 @@ def check_expiring_items():
     db = SessionLocal()
 
     try:
+        # 自動為沒有通知設定的使用者建立預設設定
+        from src.models.user import User
+        users_without_settings = db.query(User).outerjoin(
+            NotificationSettings, User.id == NotificationSettings.user_id
+        ).filter(NotificationSettings.id.is_(None)).all()
+
+        if users_without_settings:
+            logger.info(f"為 {len(users_without_settings)} 位使用者建立預設通知設定")
+            for user in users_without_settings:
+                default_settings = NotificationSettings(user_id=user.id)
+                db.add(default_settings)
+            db.commit()
+
         # 查詢所有啟用效期提醒的通知設定
         settings_list = db.query(NotificationSettings).filter(
             NotificationSettings.expiry_warning_enabled == True
