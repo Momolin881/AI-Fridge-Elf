@@ -163,17 +163,50 @@ async def test_expiry_check(
     user_id: CurrentUserId
 ):
     """
-    手動觸發效期提醒檢查（測試用）
+    手動觸發效期提醒測試（直接對當前使用者發送測試通知）
 
-    這會立即執行效期檢查並發送 LINE 推播通知。
+    會先嘗試發送一則簡單文字訊息，確認 LINE Push API 是否正常。
     """
+    from src.models.user import User
+    from src.services.line_bot import send_text_message, send_expiry_notification
+
     try:
-        logger.info(f"使用者 {user_id} 手動觸發效期提醒檢查")
-        check_expiring_items()
-        return {"message": "效期提醒檢查已執行，請查看 LINE 訊息"}
-    except Exception as e:
-        logger.error(f"手動觸發效期提醒檢查失敗: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+        # 1. 查詢當前使用者的 LINE User ID
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return {"success": False, "error": f"找不到使用者 (id={user_id})"}
+
+        line_user_id = user.line_user_id
+        if not line_user_id:
+            return {"success": False, "error": "使用者沒有 LINE User ID"}
+
+        logger.info(f"測試通知: user_id={user_id}, line_user_id={line_user_id}")
+
+        # 2. 先嘗試發送簡單文字訊息測試 LINE API 連線
+        test_success = send_text_message(
+            line_user_id,
+            "🧪 AI Fridge Elf 通知測試\n\n如果您收到這則訊息，表示 LINE 推播通知功能正常運作！"
         )
+
+        if not test_success:
+            return {
+                "success": False,
+                "error": "LINE Push API 發送失敗，請檢查後端 log 確認詳細錯誤",
+                "line_user_id": line_user_id[:8] + "..."  # 只顯示前 8 碼
+            }
+
+        # 3. 如果文字訊息成功，也執行完整的過期檢查
+        check_expiring_items()
+
+        return {
+            "success": True,
+            "message": "測試通知已成功發送！請查看 LINE 訊息。",
+            "line_user_id": line_user_id[:8] + "..."
+        }
+
+    except Exception as e:
+        logger.error(f"手動觸發效期提醒檢查失敗: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }

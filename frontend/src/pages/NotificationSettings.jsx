@@ -100,8 +100,14 @@ function NotificationSettings() {
   const handleTestNotification = async () => {
     try {
       setTesting(true);
-      await testExpiryNotification();
-      message.success('測試通知已發送，請查看 LINE 訊息');
+      const result = await testExpiryNotification();
+      console.log('測試通知結果:', result);
+
+      if (result.success) {
+        message.success(result.message || '測試通知已發送，請查看 LINE 訊息');
+      } else {
+        message.error('通知發送失敗：' + (result.error || '未知錯誤'));
+      }
     } catch (error) {
       console.error('發送測試通知失敗:', error);
       if (error.response?.status === 401) {
