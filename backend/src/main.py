@@ -71,7 +71,35 @@ async def lifespan(app: FastAPI):
             else:
                 print("food_items.volume_liters 欄位已存在")
     except Exception as e:
-        print(f"資料庫欄位檢查/新增時發生錯誤（可忽略）: {e}")
+        print(f"food_items 欄位檢查/新增時發生錯誤（可忽略）: {e}")
+
+    # 檢查並新增 notification_settings 可能缺少的欄位
+    try:
+        ns_table_exists = inspector.has_table('notification_settings')
+        if ns_table_exists:
+            ns_columns = [col['name'] for col in inspector.get_columns('notification_settings')]
+            print(f"現有 notification_settings 欄位: {ns_columns}")
+
+            ns_migrations = {
+                'budget_warning_enabled': "ALTER TABLE notification_settings ADD COLUMN budget_warning_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+                'budget_warning_amount': "ALTER TABLE notification_settings ADD COLUMN budget_warning_amount INTEGER NOT NULL DEFAULT 5000",
+                'weekly_report_enabled': "ALTER TABLE notification_settings ADD COLUMN weekly_report_enabled BOOLEAN NOT NULL DEFAULT TRUE",
+                'weekly_report_frequency': "ALTER TABLE notification_settings ADD COLUMN weekly_report_frequency VARCHAR(20) NOT NULL DEFAULT 'weekly'",
+                'monthly_report_enabled': "ALTER TABLE notification_settings ADD COLUMN monthly_report_enabled BOOLEAN NOT NULL DEFAULT TRUE",
+            }
+
+            with engine.connect() as conn:
+                for col_name, alter_sql in ns_migrations.items():
+                    if col_name not in ns_columns:
+                        conn.execute(text(alter_sql))
+                        conn.commit()
+                        print(f"已新增 notification_settings.{col_name} 欄位")
+                    else:
+                        print(f"notification_settings.{col_name} 欄位已存在")
+        else:
+            print("notification_settings 表尚不存在，將由 create_all 建立")
+    except Exception as e:
+        print(f"notification_settings 欄位檢查/新增時發生錯誤（可忽略）: {e}")
 
     # 啟動排程器
     scheduler.start_scheduler()

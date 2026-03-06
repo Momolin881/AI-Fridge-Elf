@@ -9,7 +9,10 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from sqlalchemy import or_
+
 from src.models.fridge import Fridge, FridgeCompartment
+from src.models.fridge_member import FridgeMember
 from src.schemas.fridge import (
     FridgeCreate,
     FridgeUpdate,
@@ -27,8 +30,19 @@ router = APIRouter(tags=["Fridges"])
 
 @router.get("/fridges", response_model=list[FridgeResponse])
 async def list_fridges(db: DBSession, user_id: CurrentUserId):
-    """取得使用者的所有冰箱"""
-    fridges = db.query(Fridge).filter(Fridge.user_id == user_id).all()
+    """取得使用者的所有冰箱（包含自有和共享的冰箱）"""
+    # 查詢使用者是成員的冰箱 ID
+    member_fridge_ids = db.query(FridgeMember.fridge_id).filter(
+        FridgeMember.user_id == user_id
+    ).subquery()
+
+    # 查詢自有的冰箱 + 共享的冰箱
+    fridges = db.query(Fridge).filter(
+        or_(
+            Fridge.user_id == user_id,
+            Fridge.id.in_(db.query(member_fridge_ids))
+        )
+    ).all()
 
     # 為每個冰箱計算 compartment_mode
     result = []

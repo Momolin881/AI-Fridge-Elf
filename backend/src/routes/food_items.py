@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from src.models.food_item import FoodItem
 from src.models.fridge import Fridge
+from src.models.fridge_member import FridgeMember
 from src.schemas.food_item import (
     FoodItemCreate,
     FoodItemUpdate,
@@ -73,11 +74,21 @@ async def list_food_items(
     - is_expired: 篩選是否過期（true/false）
     - status: 篩選狀態（active: 進行中, archived: 已處理, all: 全部）
     """
-    # 查詢使用者的所有食材
+    # 查詢使用者的所有食材（包含自有和共享冰箱）
+    from sqlalchemy import or_
+    member_fridge_ids = db.query(FridgeMember.fridge_id).filter(
+        FridgeMember.user_id == user_id
+    ).subquery()
+
     query = (
         db.query(FoodItem)
         .join(Fridge, FoodItem.fridge_id == Fridge.id)
-        .filter(Fridge.user_id == user_id)
+        .filter(
+            or_(
+                Fridge.user_id == user_id,
+                Fridge.id.in_(db.query(member_fridge_ids))
+            )
+        )
     )
 
     # 篩選狀態

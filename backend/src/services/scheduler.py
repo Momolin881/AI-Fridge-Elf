@@ -9,12 +9,14 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 
 from src.database import SessionLocal
 from src.models.notification_settings import NotificationSettings
 from src.models.food_item import FoodItem
 from src.models.fridge import Fridge, FridgeCompartment
+from src.models.fridge_member import FridgeMember
 from src.services.line_bot import send_expiry_notification, send_space_warning, LineBot
 from src.services.monthly_stats_service import MonthlyStatsService
 from src.services.weekly_stats_service import generate_weekly_report_message
@@ -121,8 +123,10 @@ def check_expiring_items():
                 db.add(default_settings)
             db.commit()
 
-        # 查詢所有啟用效期提醒的通知設定
-        settings_list = db.query(NotificationSettings).filter(
+        # 查詢所有啟用效期提醒的通知設定（eager load user 以避免 lazy loading 問題）
+        settings_list = db.query(NotificationSettings).options(
+            joinedload(NotificationSettings.user)
+        ).filter(
             NotificationSettings.expiry_warning_enabled == True
         ).all()
 
@@ -134,17 +138,35 @@ def check_expiring_items():
                 today_taiwan = datetime.now(TAIWAN_TZ).date()
                 warning_date = today_taiwan + timedelta(days=settings.expiry_warning_days)
 
-                # 查詢該使用者即將過期或已過期的食材
-                expiring_items = db.query(FoodItem).join(
-                    Fridge, FoodItem.fridge_id == Fridge.id
-                ).filter(
-                    Fridge.user_id == settings.user_id,
+                # 查詢該使用者可存取的所有冰箱 ID（自有 + 共享）
+                owned_fridge_ids = db.query(Fridge.id).filter(
+                    Fridge.user_id == settings.user_id
+                )
+                member_fridge_ids = db.query(FridgeMember.fridge_id).filter(
+                    FridgeMember.user_id == settings.user_id
+                )
+                accessible_fridge_ids = owned_fridge_ids.union(member_fridge_ids).subquery()
+
+                # 查詢即將過期或已過期的食材（包含自有和共享冰箱）
+                expiring_items = db.query(FoodItem).filter(
+                    FoodItem.fridge_id.in_(
+                        db.query(accessible_fridge_ids.c.id)
+                    ),
                     FoodItem.expiry_date.isnot(None),
                     FoodItem.expiry_date <= warning_date,
                     FoodItem.status == 'active'  # 只查詢未處理的食材
                 ).all()
 
                 if expiring_items:
+                    # 檢查 user 是否存在
+                    if not settings.user:
+                        logger.error(f"使用者 {settings.user_id} 的 User 記錄不存在，跳過通知")
+                        continue
+                    
+                    if not settings.user.line_user_id:
+                        logger.error(f"使用者 {settings.user_id} 沒有 LINE User ID，跳過通知")
+                        continue
+
                     # 準備通知資料
                     items_data = []
                     for item in expiring_items:
@@ -156,11 +178,19 @@ def check_expiring_items():
                         })
 
                     # 發送通知
-                    logger.info(f"使用者 {settings.user_id} 有 {len(items_data)} 項食材即將過期")
-                    send_expiry_notification(settings.user.line_user_id, items_data)
+                    line_user_id = settings.user.line_user_id
+                    logger.info(
+                        f"使用者 {settings.user_id} (LINE: {line_user_id}) "
+                        f"有 {len(items_data)} 項食材即將過期，準備發送通知"
+                    )
+                    success = send_expiry_notification(line_user_id, items_data)
+                    if success:
+                        logger.info(f"使用者 {settings.user_id} 的效期通知發送成功")
+                    else:
+                        logger.error(f"使用者 {settings.user_id} 的效期通知發送失敗")
 
             except Exception as e:
-                logger.error(f"處理使用者 {settings.user_id} 的效期提醒時發生錯誤: {e}")
+                logger.error(f"處理使用者 {settings.user_id} 的效期提醒時發生錯誤: {e}", exc_info=True)
                 continue
 
         logger.info("完成：檢查即將過期食材")
@@ -186,8 +216,10 @@ def check_space_usage():
     DEFAULT_MAX_ITEMS = 50
 
     try:
-        # 查詢所有啟用空間提醒的通知設定
-        settings_list = db.query(NotificationSettings).filter(
+        # 查詢所有啟用空間提醒的通知設定（eager load user 以避免 lazy loading 問題）
+        settings_list = db.query(NotificationSettings).options(
+            joinedload(NotificationSettings.user)
+        ).filter(
             NotificationSettings.space_warning_enabled == True
         ).all()
 
@@ -195,12 +227,26 @@ def check_space_usage():
 
         for settings in settings_list:
             try:
-                # 查詢該使用者的所有冰箱
-                fridges = db.query(Fridge).filter(
+                # 查詢該使用者可存取的所有冰箱（自有 + 共享）
+                owned_fridges = db.query(Fridge).filter(
                     Fridge.user_id == settings.user_id
                 ).all()
+                
+                member_fridge_ids = db.query(FridgeMember.fridge_id).filter(
+                    FridgeMember.user_id == settings.user_id
+                ).all()
+                member_fridge_id_list = [fid for (fid,) in member_fridge_ids]
+                
+                shared_fridges = db.query(Fridge).filter(
+                    Fridge.id.in_(member_fridge_id_list)
+                ).all() if member_fridge_id_list else []
+                
+                # 合併去重
+                all_fridges = {f.id: f for f in owned_fridges}
+                for f in shared_fridges:
+                    all_fridges[f.id] = f
 
-                for fridge in fridges:
+                for fridge in all_fridges.values():
                     # 計算已存放的食材數量（只計算 active 狀態）
                     item_count = db.query(func.count(FoodItem.id)).filter(
                         FoodItem.fridge_id == fridge.id,
@@ -242,8 +288,10 @@ def send_weekly_reports_to_all_users():
     db = SessionLocal()
     
     try:
-        # 查詢所有啟用週報的通知設定
-        settings_list = db.query(NotificationSettings).filter(
+        # 查詢所有啟用週報的通知設定（eager load user 以避免 lazy loading 問題）
+        settings_list = db.query(NotificationSettings).options(
+            joinedload(NotificationSettings.user)
+        ).filter(
             NotificationSettings.weekly_report_enabled == True
         ).all()
         
