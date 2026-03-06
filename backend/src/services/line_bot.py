@@ -2,21 +2,34 @@
 LINE Bot 服務模組
 
 提供 LINE Bot 訊息發送功能，包含文字訊息和 Flex Message。
+使用 line-bot-sdk v3 API。
 """
 
 import logging
 from typing import Optional
 
-from linebot import LineBotApi
-from linebot.exceptions import LineBotApiError
-from linebot.models import TextSendMessage, FlexSendMessage
+from linebot.v3.messaging import (
+    Configuration,
+    ApiClient,
+    MessagingApi,
+    PushMessageRequest,
+    TextMessage,
+    FlexMessage,
+    FlexContainer,
+)
 
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-# 初始化 LINE Bot API 客戶端
-line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
+# v3 SDK 配置
+configuration = Configuration(access_token=settings.LINE_CHANNEL_ACCESS_TOKEN)
+
+
+def _get_messaging_api() -> MessagingApi:
+    """取得 MessagingApi 實例"""
+    api_client = ApiClient(configuration)
+    return MessagingApi(api_client)
 
 
 def send_text_message(user_id: str, text: str) -> bool:
@@ -29,26 +42,20 @@ def send_text_message(user_id: str, text: str) -> bool:
 
     Returns:
         bool: 發送成功返回 True，失敗返回 False
-
-    Examples:
-        >>> success = send_text_message("U1234567890abcdef", "您好！")
-        >>> print(success)
-        True
     """
     try:
-        line_bot_api.push_message(
-            user_id,
-            TextSendMessage(text=text)
+        api = _get_messaging_api()
+        api.push_message(
+            PushMessageRequest(
+                to=user_id,
+                messages=[TextMessage(text=text)]
+            )
         )
         logger.info(f"文字訊息發送成功: user_id={user_id}")
         return True
 
-    except LineBotApiError as e:
-        logger.error(f"LINE Bot API 錯誤: {e.status_code} - {e.error.message}")
-        return False
-
     except Exception as e:
-        logger.error(f"發送文字訊息失敗: {e}")
+        logger.error(f"發送文字訊息失敗: {e}", exc_info=True)
         return False
 
 
@@ -63,36 +70,25 @@ def send_flex_message(user_id: str, alt_text: str, contents: dict) -> bool:
 
     Returns:
         bool: 發送成功返回 True，失敗返回 False
-
-    Examples:
-        >>> contents = {
-        ...     "type": "bubble",
-        ...     "body": {
-        ...         "type": "box",
-        ...         "layout": "vertical",
-        ...         "contents": [
-        ...             {"type": "text", "text": "效期提醒", "weight": "bold"}
-        ...         ]
-        ...     }
-        ... }
-        >>> success = send_flex_message("U1234567890abcdef", "效期提醒", contents)
-        >>> print(success)
-        True
     """
     try:
-        line_bot_api.push_message(
-            user_id,
-            FlexSendMessage(alt_text=alt_text, contents=contents)
+        api = _get_messaging_api()
+        api.push_message(
+            PushMessageRequest(
+                to=user_id,
+                messages=[
+                    FlexMessage(
+                        alt_text=alt_text,
+                        contents=FlexContainer.from_dict(contents)
+                    )
+                ]
+            )
         )
         logger.info(f"Flex Message 發送成功: user_id={user_id}, alt_text={alt_text}")
         return True
 
-    except LineBotApiError as e:
-        logger.error(f"LINE Bot API 錯誤: {e.status_code} - {e.error.message}")
-        return False
-
     except Exception as e:
-        logger.error(f"發送 Flex Message 失敗: {e}")
+        logger.error(f"發送 Flex Message 失敗: {e}", exc_info=True)
         return False
 
 
@@ -106,13 +102,6 @@ def send_expiry_notification(user_id: str, items: list[dict]) -> bool:
 
     Returns:
         bool: 發送成功返回 True，失敗返回 False
-
-    Examples:
-        >>> items = [
-        ...     {"name": "牛奶", "expiry_date": "2026-01-05", "days_remaining": 2},
-        ...     {"name": "蘋果", "expiry_date": "2026-01-04", "days_remaining": 1}
-        ... ]
-        >>> success = send_expiry_notification("U1234567890abcdef", items)
     """
     if not items:
         logger.warning("沒有即將過期的食材，不發送通知")
@@ -122,7 +111,7 @@ def send_expiry_notification(user_id: str, items: list[dict]) -> bool:
     item_contents = []
     for item in items[:5]:  # 最多顯示 5 個
         days = item.get("days_remaining", 0)
-        
+
         # 根據天數決定顯示文字和顏色
         if days < 0:
             days_text = f"已過期 {abs(days)} 天"
@@ -250,50 +239,43 @@ def send_space_warning(user_id: str, usage_percentage: float) -> bool:
 
 class LineBot:
     """LINE Bot 類別，提供各種推播功能"""
-    
+
     def __init__(self):
-        self.api = line_bot_api
-    
+        self.configuration = configuration
+
     def send_text_message(self, user_id: str, text: str) -> bool:
         """
         發送文字訊息給指定使用者（實例方法，委派給模組級函式）
-        
-        Args:
-            user_id: LINE User ID
-            text: 要發送的文字訊息
-            
-        Returns:
-            bool: 發送成功返回 True，失敗返回 False
         """
         return send_text_message(user_id, text)
-    
-    async def send_monthly_stats_notification(self, user_id: int, stats: dict) -> bool:
+
+    def send_monthly_stats_notification(self, user_id: int, stats: dict) -> bool:
         """
         發送月度省錢統計推播
-        
+
         Args:
             user_id: 用戶 ID
             stats: 月度統計資料
-            
+
         Returns:
             bool: 發送成功返回 True，失敗返回 False
         """
         try:
             # 構建推播訊息
             message = self._build_monthly_stats_message(stats)
-            
+
             # 發送推播（需要轉換為 LINE User ID）
-            line_user_id = await self._get_line_user_id(user_id)
+            line_user_id = self._get_line_user_id(user_id)
             if not line_user_id:
                 logger.error(f"找不到用戶的 LINE User ID: {user_id}")
                 return False
-            
+
             return send_text_message(line_user_id, message)
-            
+
         except Exception as e:
             logger.error(f"發送月度統計推播失敗 (user_id: {user_id}): {e}")
             return False
-    
+
     def _build_monthly_stats_message(self, stats: dict) -> str:
         """構建月度統計推播訊息"""
         month = stats.get('month', '上個月')
@@ -303,7 +285,7 @@ class LineBot:
         used_count = stats.get('used_count', 0)
         wasted_count = stats.get('wasted_count', 0)
         suggestions = stats.get('suggestions', [])
-        
+
         # 構建主要訊息
         message_parts = [
             f"🎉✨ {month} 省錢報告 ✨🎉",
@@ -313,70 +295,65 @@ class LineBot:
             f"📈 省錢率：{save_rate:.1f}%",
             f"✅ 用完食材：{used_count} 項",
         ]
-        
+
         # 如果有浪費，加入浪費資訊
         if wasted_count > 0:
             message_parts.extend([
                 f"❌ 浪費食材：{wasted_count} 項 (${wasted_money:,.0f})"
             ])
-        
+
         message_parts.append("")
-        
+
         # 加入個人化建議
         if suggestions:
             message_parts.append("💡 專屬建議：")
             for suggestion in suggestions:
                 message_parts.append(f"• {suggestion}")
-        
+
         message_parts.extend([
             "",
             "🌟 繼續加油，下個月一起達成更好的成績吧！",
             "",
             f"👉 點此查看詳細: https://liff.line.me/{settings.LIFF_ID}"
         ])
-        
+
         return "\n".join(message_parts)
-    
-    async def _get_line_user_id(self, user_id: int) -> Optional[str]:
+
+    def _get_line_user_id(self, user_id: int) -> Optional[str]:
         """
         根據系統 user_id 獲取對應的 LINE User ID
-        
-        這裡需要查詢資料庫中的用戶 LINE ID 映射
-        目前暫時返回測試用的 LINE User ID
         """
-        # TODO: 實作從資料庫查詢 LINE User ID 的邏輯
-        # 現在先返回測試用 ID
-        if user_id == 1:
-            return "U1234567890abcdef"  # 測試用 LINE User ID
-        
-        logger.warning(f"找不到用戶 {user_id} 的 LINE User ID")
-        return None
-    
-    async def send_monthly_stats_flex_message(self, user_id: int, stats: dict) -> bool:
+        from src.database import SessionLocal
+        from src.models.user import User
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                return user.line_user_id
+            logger.warning(f"找不到用戶 {user_id} 的 LINE User ID")
+            return None
+        finally:
+            db.close()
+
+    def send_monthly_stats_flex_message(self, user_id: int, stats: dict) -> bool:
         """
         發送月度統計 Flex Message（更豐富的視覺效果）
-        
-        Args:
-            user_id: 用戶 ID
-            stats: 月度統計資料
-            
-        Returns:
-            bool: 發送成功返回 True，失敗返回 False
         """
         try:
-            line_user_id = await self._get_line_user_id(user_id)
+            line_user_id = self._get_line_user_id(user_id)
             if not line_user_id:
                 return False
-            
+
             contents = self._build_monthly_stats_flex_content(stats)
             alt_text = f"🎉 {stats.get('month', '上個月')} 省錢報告"
-            
+
             return send_flex_message(line_user_id, alt_text, contents)
-            
+
         except Exception as e:
             logger.error(f"發送月度統計 Flex Message 失敗 (user_id: {user_id}): {e}")
             return False
-    
+
     def _build_monthly_stats_flex_content(self, stats: dict) -> dict:
         """構建月度統計 Flex Message 內容"""
         month = stats.get('month', '上個月')
@@ -386,7 +363,7 @@ class LineBot:
         used_count = stats.get('used_count', 0)
         wasted_count = stats.get('wasted_count', 0)
         suggestions = stats.get('suggestions', [])
-        
+
         # 根據省錢率決定顏色
         if save_rate >= 80:
             header_color = "#00C851"  # 綠色
@@ -397,7 +374,7 @@ class LineBot:
         else:
             header_color = "#ff4444"  # 紅色
             emoji = "💪"
-        
+
         contents = {
             "type": "bubble",
             "header": {
@@ -519,7 +496,7 @@ class LineBot:
                 ]
             }
         }
-        
+
         # 如果有浪費，加入浪費統計
         if wasted_count > 0:
             waste_item = {
@@ -545,5 +522,5 @@ class LineBot:
                 "margin": "md"
             }
             contents["body"]["contents"][3]["contents"].append(waste_item)
-        
+
         return contents

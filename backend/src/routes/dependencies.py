@@ -10,8 +10,6 @@ from typing import Annotated
 import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from linebot import LineBotApi
-from linebot.exceptions import LineBotApiError
 from sqlalchemy.orm import Session
 
 from src.config import settings
@@ -21,9 +19,6 @@ logger = logging.getLogger(__name__)
 
 # HTTP Bearer token 認證
 security = HTTPBearer()
-
-# LINE Bot API 客戶端
-line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 
 
 async def verify_liff_token(access_token: str) -> dict:
