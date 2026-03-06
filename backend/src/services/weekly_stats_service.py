@@ -336,7 +336,7 @@ def get_weekly_insights(stats: Dict) -> List[str]:
 
 def generate_weekly_report_message(user_id: int, db: Session) -> Optional[str]:
     """
-    生成週報推播訊息（支援新手特殊版本）
+    生成週報推播訊息（每週日固定發送給所有用戶）
     
     Args:
         user_id: 使用者 ID
@@ -352,18 +352,78 @@ def generate_weekly_report_message(user_id: int, db: Session) -> Optional[str]:
         # 檢查是否為新手用戶
         if is_first_week_user(user_id, db):
             logger.info(f"生成新手專屬週報 (user_id: {user_id})")
-            # 新手即使沒有數據也要發送鼓勵週報
             return generate_newbie_celebration_report(user_id, stats, db)
         
-        # 一般用戶：沒有數據就不發送
-        if stats["total_processed"] == 0:
-            return None
+        # 一般用戶：本週有處理食材 → 完整週報
+        if stats["total_processed"] > 0:
+            return generate_regular_weekly_report(user_id, stats, db)
         
-        # 一般用戶的週報邏輯
-        return generate_regular_weekly_report(user_id, stats, db)
+        # 一般用戶：本週無處理食材 → 簡易冰箱狀態提醒
+        return _generate_quiet_week_report(user_id, stats, db)
         
     except Exception as e:
         logger.error(f"生成週報訊息失敗 (user_id: {user_id}): {e}")
+        return None
+
+
+def _generate_quiet_week_report(user_id: int, stats: Dict, db: Session) -> str:
+    """
+    生成「本週無動態」的簡易週報
+    
+    即使本週沒有處理食材，也提醒用戶檢查冰箱狀態。
+    """
+    from src.models.fridge import Fridge
+    from src.models.fridge_member import FridgeMember
+    from sqlalchemy import or_
+    
+    try:
+        # 查詢用戶冰箱中的 active 食材
+        fridge_ids = db.query(Fridge.id).filter(
+            or_(
+                Fridge.user_id == user_id,
+                Fridge.id.in_(
+                    db.query(FridgeMember.fridge_id).filter(FridgeMember.user_id == user_id)
+                )
+            )
+        ).subquery()
+        
+        active_count = db.query(func.count(FoodItem.id)).filter(
+            FoodItem.fridge_id.in_(db.query(fridge_ids)),
+            FoodItem.status == 'active'
+        ).scalar() or 0
+
+        today = datetime.now(TAIWAN_TZ).date()
+        expiring_count = db.query(func.count(FoodItem.id)).filter(
+            FoodItem.fridge_id.in_(db.query(fridge_ids)),
+            FoodItem.status == 'active',
+            FoodItem.expiry_date.isnot(None),
+            FoodItem.expiry_date <= today + timedelta(days=3)
+        ).scalar() or 0
+        
+        message_parts = [
+            "📊 AI 冰箱精靈 - 週報告",
+            f"📅 {stats['week_start']} ~ {stats['week_end']}",
+            "",
+            "😌 本週冰箱很平靜，沒有處理任何食材。",
+            "",
+            "🧊 目前冰箱狀態：",
+            f"• 食材數量：{active_count} 項",
+        ]
+        
+        if expiring_count > 0:
+            message_parts.append(f"• ⚠️ 即將過期：{expiring_count} 項（請注意！）")
+        else:
+            message_parts.append("• ✅ 沒有即將過期的食材")
+        
+        message_parts.extend([
+            "",
+            "🌱 記得定期檢查冰箱，減少食物浪費！"
+        ])
+        
+        return "\n".join(message_parts)
+        
+    except Exception as e:
+        logger.error(f"生成簡易週報失敗 (user_id: {user_id}): {e}")
         return None
 
 
