@@ -138,23 +138,14 @@ def check_expiring_items():
                 today_taiwan = datetime.now(TAIWAN_TZ).date()
                 warning_date = today_taiwan + timedelta(days=settings.expiry_warning_days)
 
-                # 查詢該使用者可存取的所有冰箱 ID（自有 + 共享）
-                owned_fridge_ids = db.query(Fridge.id).filter(
-                    Fridge.user_id == settings.user_id
-                )
-                member_fridge_ids = db.query(FridgeMember.fridge_id).filter(
-                    FridgeMember.user_id == settings.user_id
-                )
-                accessible_fridge_ids = owned_fridge_ids.union(member_fridge_ids).subquery()
-
-                # 查詢即將過期或已過期的食材（包含自有和共享冰箱）
-                expiring_items = db.query(FoodItem).filter(
-                    FoodItem.fridge_id.in_(
-                        db.query(accessible_fridge_ids.c.id)
-                    ),
+                # 查詢該使用者自有冰箱的即將過期食材（簡化查詢邏輯）
+                expiring_items = db.query(FoodItem).join(
+                    Fridge, FoodItem.fridge_id == Fridge.id
+                ).filter(
+                    Fridge.user_id == settings.user_id,
                     FoodItem.expiry_date.isnot(None),
                     FoodItem.expiry_date <= warning_date,
-                    FoodItem.status == 'active'  # 只查詢未處理的食材
+                    FoodItem.status == 'active'
                 ).all()
 
                 if expiring_items:
