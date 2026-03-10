@@ -17,7 +17,6 @@ import {
   message,
   Typography,
   Space,
-  Progress,
   Card,
   Statistic,
   Modal,
@@ -25,9 +24,9 @@ import {
   Button,
   Popover,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, ExclamationCircleOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined, BulbOutlined, BookOutlined, CheckCircleOutlined, DeleteOutlined, InboxOutlined } from '@ant-design/icons';
-import { getFoodItems, getFridges, deleteFoodItem, archiveFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember, getUserRecipes } from '../services/api';
-import { FoodItemCard, VersionFooter, ExpenseCalendarModal } from '../components';
+import { PlusOutlined, SearchOutlined, CalendarOutlined, WarningOutlined, ClockCircleOutlined, RightOutlined, CopyOutlined, DownloadOutlined, UploadOutlined, TeamOutlined, SettingOutlined, BellOutlined, BulbOutlined, BookOutlined, CheckCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getFoodItems, getFridges, archiveFoodItem, createFridgeInvite, exportFridge, importFridge, getFridgeMembers, updateMemberRole, removeMember, getUserRecipes, getOnboardingProgress, shouldShowOnboardingTutorial, markCelebrationSent, completeOnboardingTask } from '../services/api';
+import { FoodItemCard, VersionFooter, ExpenseCalendarModal, OnboardingCard, AchievementCelebration } from '../components';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -53,10 +52,88 @@ function Home() {
   const [disposalLoading, setDisposalLoading] = useState(false);
   const [memberModalVisible, setMemberModalVisible] = useState(false);
   const [recipeCategoryCounts, setRecipeCategoryCounts] = useState({ favorites: 0, '常煮': 0, pro: 0 });
+  
+  // 新手引導相關狀態
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingProgress, setOnboardingProgress] = useState(null);
+  const [celebrationVisible, setCelebrationVisible] = useState(false);
 
   useEffect(() => {
     loadData();
+    loadOnboardingData();
   }, [filter]);
+
+  // 監聽頁面焦點和可見性變化，重新載入新手進度
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('頁面重新獲得焦點，重新載入新手進度');
+      loadOnboardingData();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('頁面變為可見，重新載入新手進度');
+        loadOnboardingData();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+  
+  // 載入新手引導資料
+  const loadOnboardingData = async () => {
+    try {
+      const shouldShow = await shouldShowOnboardingTutorial();
+      if (shouldShow.should_show) {
+        setShowOnboarding(true);
+        
+        // 嘗試載入進度，但即使失敗也要顯示卡片
+        try {
+          const progress = await getOnboardingProgress();
+          console.log('🔍 loadOnboardingData - getOnboardingProgress 完整回應:', progress);
+          console.log('🔍 loadOnboardingData - progress.data:', progress.data);
+          console.log('🔍 loadOnboardingData - progress.data?.data:', progress.data?.data);
+          // 先嘗試 progress.data，如果不行再嘗試 progress.data.data
+          const progressData = progress.data?.data || progress.data;
+          console.log('🔍 loadOnboardingData - 最終使用的資料:', progressData);
+          setOnboardingProgress(progressData);
+        } catch (progressError) {
+          console.log('載入新手進度失敗，使用預設值:', progressError);
+          // 設定預設進度，確保卡片能顯示
+          setOnboardingProgress({
+            is_completed: false,
+            completed_at: null,
+            tasks: {
+              photo_upload: { completed: false, completed_at: null },
+              mark_consumed: { completed: false, completed_at: null },
+              recipe_view: { completed: false, completed_at: null }
+            },
+            achievement_sent: false
+          });
+        }
+      }
+    } catch (error) {
+      console.log('檢查新手教學狀態失敗:', error);
+      // 封測期間：如果 API 失敗，仍然顯示新手教學
+      setShowOnboarding(true);
+      setOnboardingProgress({
+        is_completed: false,
+        completed_at: null,
+        tasks: {
+          photo_upload: { completed: false, completed_at: null },
+          mark_consumed: { completed: false, completed_at: null },
+          recipe_view: { completed: false, completed_at: null }
+        },
+        achievement_sent: false
+      });
+    }
+  };
 
   useEffect(() => {
     // 套用篩選和搜尋
@@ -160,6 +237,24 @@ function Home() {
       await archiveFoodItem(selectedItemForDisposal.id, disposalReason);
       const reasonText = disposalReason === 'used' ? '用完' : '丟棄';
       message.success(`「${selectedItemForDisposal.name}」已標記為${reasonText}`);
+      
+      // 觸發新手任務2：標記用完（僅當選擇"用完"時）
+      if (disposalReason === 'used') {
+        try {
+          console.log('🔍 呼叫 completeOnboardingTask(mark_consumed)');
+          const result = await completeOnboardingTask('mark_consumed');
+          console.log('🔍 completeOnboardingTask 回應:', result);
+          if (result.data?.show_celebration) {
+            setCelebrationVisible(true);
+          }
+          // 重新載入新手進度
+          console.log('🔍 重新載入新手進度');
+          await loadOnboardingData();
+        } catch (error) {
+          console.log('更新新手進度失敗:', error);
+        }
+      }
+      
       setDisposalModalVisible(false);
       setSelectedItemForDisposal(null);
       await loadData();
@@ -182,10 +277,6 @@ function Home() {
     ).length,
   };
 
-  // 計算即將過期比例（用於進度條）
-  const expiringPercentage = stats.total > 0
-    ? Math.round(((stats.expired + stats.expiringSoon) / stats.total) * 100)
-    : 0;
 
   // 分區排序順序（新版 3 分區）
   const compartmentOrder = ['冷藏上層', '冷藏下層', '冷凍'];
@@ -283,9 +374,33 @@ function Home() {
     return sortedGroups;
   };
 
+  // 處理新手引導卡片關閉
+  const handleOnboardingClose = () => {
+    setShowOnboarding(false);
+  };
+
+  // 處理成就慶典確認
+  const handleCelebrationConfirm = async () => {
+    try {
+      await markCelebrationSent();
+      setShowOnboarding(false);
+    } catch (error) {
+      console.log('標記慶典失敗:', error);
+    }
+  };
+
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <Content style={{ padding: '16px' }}>
+        {/* 新手三部曲卡片 */}
+        {showOnboarding && (
+          <OnboardingCard
+            progress={onboardingProgress}
+            onClose={handleOnboardingClose}
+            isVisible={showOnboarding}
+          />
+        )}
+
         {/* 1. 新增食材區塊 */}
         <Title level={5} style={{ marginBottom: 8, color: '#666' }}>
           1.新增食材
@@ -1025,6 +1140,13 @@ function Home() {
             </div>
           </Space>
         </Modal>
+
+        {/* 成就慶典彈窗 */}
+        <AchievementCelebration
+          visible={celebrationVisible}
+          onClose={() => setCelebrationVisible(false)}
+          onConfirm={handleCelebrationConfirm}
+        />
       </Content>
     </Layout>
   );

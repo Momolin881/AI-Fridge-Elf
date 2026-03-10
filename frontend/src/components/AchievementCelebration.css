@@ -1,0 +1,204 @@
+/**
+ * 成就慶典組件樣式
+ */
+
+/* Confetti 動畫容器 */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.confetti-container.active {
+  pointer-events: auto;
+}
+
+/* Confetti 粒子 */
+.confetti-particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  opacity: 0.8;
+  animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotateZ(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotateZ(360deg);
+    opacity: 0;
+  }
+}
+
+/* 慶典彈窗 */
+.celebration-modal .ant-modal {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.celebration-modal .ant-modal-content {
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+}
+
+.celebration-modal .ant-modal-body {
+  padding: 40px 32px;
+}
+
+/* 慶典內容 */
+.celebration-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+/* 獎盃容器 */
+.trophy-container {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.trophy-icon {
+  font-size: 80px;
+  color: #ffd700;
+  filter: drop-shadow(0 4px 8px rgba(255, 215, 0, 0.3));
+  animation: trophy-bounce 2s ease-in-out infinite;
+}
+
+@keyframes trophy-bounce {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* 慶典標題 */
+.celebration-title {
+  color: #262626 !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: title-glow 3s ease-in-out infinite;
+}
+
+@keyframes title-glow {
+  0%, 100% {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 215, 0, 0.3);
+  }
+}
+
+/* 引用容器 */
+.quote-container {
+  background: linear-gradient(135deg, #f6ffed, #e6f7ff);
+  padding: 20px 24px;
+  border-radius: 12px;
+  border-left: 4px solid #52c41a;
+  max-width: 400px;
+  position: relative;
+}
+
+.quote-container::before {
+  content: '"';
+  font-size: 48px;
+  color: #52c41a;
+  position: absolute;
+  top: -8px;
+  left: 8px;
+  font-family: serif;
+  opacity: 0.3;
+}
+
+.quote-text {
+  color: #2f6e3e !important;
+  font-size: 16px !important;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.5;
+  display: block;
+}
+
+/* 成就資訊 */
+.achievement-info {
+  padding: 20px;
+  background: linear-gradient(135deg, #fff7e6, #fff2e8);
+  border-radius: 12px;
+  border: 1px solid #ffd591;
+  width: 100%;
+  max-width: 400px;
+}
+
+.achievement-text {
+  color: #d4690a !important;
+  font-size: 16px !important;
+  font-weight: 600;
+}
+
+/* 慶典按鈕 */
+.celebration-actions {
+  margin-top: 8px;
+}
+
+.celebration-button {
+  background: linear-gradient(135deg, #52c41a, #73d13d) !important;
+  border: none !important;
+  height: 48px !important;
+  padding: 0 32px !important;
+  border-radius: 24px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.celebration-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(82, 196, 26, 0.4) !important;
+}
+
+.celebration-button:active {
+  transform: translateY(0px) !important;
+}
+
+/* 響應式設計 */
+@media (max-width: 576px) {
+  .celebration-modal .ant-modal-body {
+    padding: 32px 20px;
+  }
+  
+  .trophy-icon {
+    font-size: 64px;
+  }
+  
+  .celebration-title {
+    font-size: 20px !important;
+  }
+  
+  .quote-text {
+    font-size: 14px !important;
+  }
+  
+  .achievement-text {
+    font-size: 14px !important;
+  }
+  
+  .quote-container,
+  .achievement-info {
+    max-width: 100%;
+  }
+}

@@ -1,0 +1,195 @@
+/**
+ * 新手三部曲卡片樣式 - 淺色系設計
+ */
+
+.onboarding-card {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.onboarding-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* 標題區域 */
+.onboarding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.onboarding-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  font-size: 24px;
+}
+
+.title-text {
+  margin: 0 !important;
+  color: #262626;
+  font-weight: 600;
+}
+
+.close-button {
+  color: #8c8c8c;
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #595959;
+}
+
+/* 副標題 */
+.subtitle {
+  color: #8c8c8c;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 24px;
+}
+
+/* 任務區域 */
+.tasks-container {
+  margin-bottom: 24px;
+}
+
+.tasks-row {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.task-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+/* 任務圓圈 */
+.task-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.task-circle.pending {
+  background: #f6ffed;
+  border: 2px solid #d9f7be;
+}
+
+.task-circle.completed {
+  background: #f6ffed;
+  border: 2px solid #52c41a;
+  box-shadow: 0 0 0 4px rgba(82, 196, 26, 0.1);
+}
+
+.task-circle.completed::after {
+  content: '✓';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #52c41a;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.task-icon {
+  font-size: 24px;
+}
+
+/* 任務資訊 */
+.task-info {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-title {
+  color: #262626;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.task-description {
+  color: #8c8c8c;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* 進度區域 */
+.progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-text {
+  color: #8c8c8c;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 響應式設計 */
+@media (max-width: 576px) {
+  .tasks-row {
+    gap: 16px;
+  }
+  
+  .task-circle {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .task-icon {
+    font-size: 20px;
+  }
+  
+  .task-title {
+    font-size: 13px;
+  }
+  
+  .task-description {
+    font-size: 11px;
+  }
+}
+
+/* Ant Design 進度條客製化 */
+.onboarding-card .ant-progress-bg {
+  background: linear-gradient(90deg, #52c41a, #73d13d) !important;
+}
+
+.onboarding-card .ant-progress-text {
+  color: #52c41a !important;
+  font-weight: 600;
+}

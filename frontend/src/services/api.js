@@ -455,4 +455,55 @@ export const importFridge = (fridgeId, data, clearExisting = false) => {
   return apiClient.post(`/fridges/${fridgeId}/import?clear_existing=${clearExisting}`, data);
 };
 
+// ---------- 新手引導相關 ----------
+
+/**
+ * 獲取新手引導進度
+ * @returns {Promise<Object>} 新手進度資料
+ */
+export const getOnboardingProgress = () => {
+  return apiClient.get('/onboarding/progress');
+};
+
+/**
+ * 初始化新手引導
+ * @returns {Promise<Object>} 初始化結果
+ */
+export const initializeOnboarding = () => {
+  return apiClient.post('/onboarding/initialize');
+};
+
+/**
+ * 完成新手任務
+ * @param {string} taskName - 任務名稱 ('photo_upload', 'mark_consumed', 'recipe_view')
+ * @returns {Promise<Object>} 完成結果
+ */
+export const completeOnboardingTask = (taskName) => {
+  return apiClient.post(`/onboarding/task/${taskName}/complete`);
+};
+
+/**
+ * 標記成就慶典已顯示
+ * @returns {Promise<Object>} 標記結果
+ */
+export const markCelebrationSent = () => {
+  return apiClient.post('/onboarding/celebration/sent');
+};
+
+/**
+ * 檢查是否應該顯示新手教學
+ * @returns {Promise<Object>} 顯示狀態
+ */
+export const shouldShowOnboardingTutorial = () => {
+  return apiClient.get('/onboarding/should-show-tutorial');
+};
+
+/**
+ * 獲取新手進度統計
+ * @returns {Promise<Object>} 進度統計
+ */
+export const getOnboardingStats = () => {
+  return apiClient.get('/onboarding/stats');
+};
+
 export default apiClient;

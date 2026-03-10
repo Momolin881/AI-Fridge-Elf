@@ -6,6 +6,7 @@ User 模型
 
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import relationship
 
 from src.database import Base
@@ -23,6 +24,9 @@ class User(Base):
 
     # 使用者設定
     storage_mode = Column(String(20), default="simple", nullable=False)  # "simple" or "detailed"
+    
+    # 新手引導進度（新增欄位，可選）
+    onboarding_progress = Column(JSON, nullable=True, default=None)
 
     # 時間戳記
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

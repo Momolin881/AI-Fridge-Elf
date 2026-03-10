@@ -26,7 +26,7 @@ import {
   HeartOutlined,
   HeartFilled,
 } from '@ant-design/icons';
-import { getFoodItems, getRecipeRecommendations, createUserRecipe } from '../services/api';
+import { getFoodItems, getRecipeRecommendations, createUserRecipe, completeOnboardingTask } from '../services/api';
 
 const { Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -54,6 +54,13 @@ function RecipeRecommendations() {
       // 如果有食材，自動推薦
       if (items.length > 0) {
         await getRecommendations();
+      }
+      
+      // 觸發新手任務3：查看AI食譜
+      try {
+        await completeOnboardingTask('recipe_view');
+      } catch (error) {
+        console.log('更新新手進度失敗:', error);
       }
     } catch (error) {
       console.error('載入資料失敗:', error);

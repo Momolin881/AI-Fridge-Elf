@@ -6,7 +6,7 @@
  * 2. 手動輸入
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Layout,
@@ -27,7 +27,7 @@ import {
 } from 'antd';
 import { CameraOutlined, FormOutlined, CalendarOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getFridges, getFridge, recognizeFoodImage, createFoodItem, uploadFoodImage } from '../services/api';
+import { getFridges, getFridge, recognizeFoodImage, createFoodItem, uploadFoodImage, completeOnboardingTask } from '../services/api';
 import { ImageUploader, CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -103,19 +103,18 @@ function AddFoodItem() {
     }
   };
 
+  // 使用 useCallback 避免 onChange 處理函數重新建立導致的循環引用警告
+  const handleCompartmentChange = useCallback((value) => {
+    // 選擇分區時，自動設定儲存類型
+    const compartment = selectedFridgeDetail?.compartments?.find((c) => c.id === value);
+    if (compartment?.parent_type) {
+      form.setFieldValue('storage_type', compartment.parent_type);
+    }
+  }, [selectedFridgeDetail?.compartments, form]);
+
   const handleImageUpload = async (file) => {
     const fridgeId = form.getFieldValue('fridge_id') || selectedFridge;
     const storageType = form.getFieldValue('storage_type');
-    const compartmentId = form.getFieldValue('compartment_id');
-
-    // Debug logging
-    console.log('🔍 handleImageUpload called:', {
-      fridgeId,
-      selectedFridge,
-      storageType,
-      compartmentId,
-      compartmentMode: selectedFridgeDetail?.compartment_mode,
-    });
 
     // 注意：儲存類型和分區都移到儲存時檢查，允許先拍照辨識
     // 簡單模式和細分模式都使用「冷藏」作為 AI 辨識時的預設值
@@ -156,6 +155,15 @@ function AddFoodItem() {
 
       // 設定預覽圖
       setPreviewImageUrl(result.image_url);
+      
+      // 觸發新手任務1：拍照入庫（AI辨識成功即算完成）
+      try {
+        await completeOnboardingTask('photo_upload');
+        // 新手任務1完成：拍照入庫
+      } catch (taskError) {
+        // 靜默處理，不影響正常流程
+        // 更新新手進度失敗 - 靜默處理
+      }
     } catch (error) {
       console.error('AI 辨識失敗:', error);
       
@@ -202,6 +210,15 @@ function AddFoodItem() {
       setPreviewImageUrl(result.image_url);
 
       message.success({ content: '圖片上傳成功！', key: 'manual-upload' });
+      
+      // 觸發新手任務1：拍照入庫（手動上傳成功即算完成）
+      try {
+        await completeOnboardingTask('photo_upload');
+        // 新手任務1完成：拍照入庫（手動上傳）
+      } catch (taskError) {
+        // 靜默處理，不影響正常流程
+        // 更新新手進度失敗 - 靜默處理
+      }
     } catch (error) {
       console.error('圖片上傳失敗:', error);
       message.error({ content: '圖片上傳失敗，請稍後再試', key: 'manual-upload' });
@@ -249,6 +266,15 @@ function AddFoodItem() {
 
       await createFoodItem(foodData);
       message.success('新增食材成功！');
+      
+      // 觸發新手任務1：拍照入庫
+      try {
+        await completeOnboardingTask('photo_upload');
+      } catch (error) {
+        // 靜默處理，不影響正常流程
+        console.log('更新新手進度失敗:', error);
+      }
+      
       navigate('/');
     } catch (error) {
       console.error('新增食材失敗:', error);
@@ -350,13 +376,7 @@ function AddFoodItem() {
                       parent: c.parent_type,
                     })) || []
                   }
-                  onChange={(value) => {
-                    // 選擇分區時，自動設定儲存類型
-                    const compartment = selectedFridgeDetail?.compartments?.find((c) => c.id === value);
-                    if (compartment?.parent_type) {
-                      form.setFieldValue('storage_type', compartment.parent_type);
-                    }
-                  }}
+                  onChange={handleCompartmentChange}
                 />
               </Form.Item>
             )}

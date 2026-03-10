@@ -16,7 +16,7 @@ from src.config import settings
 from src.database import Base, engine
 from src import models  # 確保所有 models 都被導入
 from src.services import scheduler
-from src.routes import food_items, fridges, line_webhook, notifications, budget, recipes, fridge_members, fridge_export, monthly_stats
+from src.routes import food_items, fridges, line_webhook, notifications, budget, recipes, fridge_members, fridge_export, monthly_stats, onboarding
 
 logger = logging.getLogger(__name__)
 
@@ -166,3 +166,4 @@ app.include_router(recipes.router, prefix="/api/v1", tags=["Recipes"])
 app.include_router(fridge_members.router, prefix="/api/v1", tags=["Fridge Members"])
 app.include_router(fridge_export.router, prefix="/api/v1", tags=["Fridge Export"])
 app.include_router(monthly_stats.router, prefix="/api/v1", tags=["Monthly Stats"])
+app.include_router(onboarding.router, prefix="/api/v1", tags=["Onboarding"])
