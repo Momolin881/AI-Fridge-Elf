@@ -57,11 +57,16 @@ def get_user_onboarding_progress(user_id: int, db: Session) -> Dict:
             return DEFAULT_ONBOARDING_PROGRESS.copy()
         
         # 如果沒有進度記錄，返回預設值
-        if user.onboarding_progress is None:
-            logger.info(f"用戶 {user_id} 沒有新手進度，返回預設值")
+        try:
+            if user.onboarding_progress is None:
+                logger.info(f"用戶 {user_id} 沒有新手進度，返回預設值")
+                return DEFAULT_ONBOARDING_PROGRESS.copy()
+            
+            return user.onboarding_progress
+        except AttributeError:
+            # 如果資料庫欄位不存在，返回預設值
+            logger.warning(f"用戶 {user_id} 沒有 onboarding_progress 欄位，返回預設值")
             return DEFAULT_ONBOARDING_PROGRESS.copy()
-        
-        return user.onboarding_progress
         
     except Exception as e:
         logger.error(f"獲取新手進度失敗 (user_id: {user_id}): {e}")
@@ -123,11 +128,21 @@ def update_task_progress(user_id: int, task_name: str, db: Session) -> Dict:
             return {"success": False, "is_all_completed": False}
         
         # 確保有進度記錄
-        if user.onboarding_progress is None:
-            initialize_onboarding_progress(user_id, db)
-            user = db.query(User).filter(User.id == user_id).first()
-        
-        progress = user.onboarding_progress.copy()
+        try:
+            if user.onboarding_progress is None:
+                initialize_onboarding_progress(user_id, db)
+                user = db.query(User).filter(User.id == user_id).first()
+            
+            progress = user.onboarding_progress.copy()
+        except AttributeError:
+            # 如果資料庫欄位不存在，返回預設進度
+            logger.warning(f"用戶 {user_id} 沒有 onboarding_progress 欄位，使用預設進度")
+            return {
+                "success": True,
+                "is_all_completed": False,
+                "progress": DEFAULT_ONBOARDING_PROGRESS.copy(),
+                "show_celebration": False
+            }
         
         # 檢查任務是否存在
         if task_name not in progress["tasks"]:
