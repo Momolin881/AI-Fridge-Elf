@@ -38,7 +38,15 @@ const OnboardingCard = ({
   const totalTasks = Object.keys(currentProgress.tasks || {}).length;
   const progressPercentage = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
   
-  // 進度計算完成
+  console.log('🔍 OnboardingCard 渲染詳情:', {
+    tasks: currentProgress.tasks,
+    photo_upload_completed: currentProgress.tasks?.photo_upload?.completed,
+    mark_consumed_completed: currentProgress.tasks?.mark_consumed?.completed, 
+    recipe_view_completed: currentProgress.tasks?.recipe_view?.completed,
+    completedCount,
+    totalTasks,
+    progressPercentage
+  });
 
   // 任務配置
   const tasks = [
