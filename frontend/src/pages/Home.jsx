@@ -189,13 +189,17 @@ function Home() {
           console.log('🔍 自動檢測到已有含圖片的食材，完成 photo_upload 任務');
           const result = await completeOnboardingTask('photo_upload');
           console.log('📊 completeOnboardingTask 完整回應:', result);
-          console.log('📊 result.data:', result?.data);
-          console.log('📊 result.data.progress:', result?.data?.progress);
+          console.log('📊 result.progress:', result?.progress);
           
-          if (result?.data?.progress) {
-            console.log('🔄 直接更新進度狀態，新狀態:', result.data.progress);
-            setOnboardingProgress(result.data.progress);
-            saveProgressToStorage(result.data.progress);
+          if (result?.progress) {
+            console.log('🔄 直接更新進度狀態，新狀態:', result.progress);
+            setOnboardingProgress(result.progress);
+            saveProgressToStorage(result.progress);
+            
+            // 檢查是否顯示慶典
+            if (result.show_celebration) {
+              setCelebrationVisible(true);
+            }
           } else {
             console.log('❌ API 回應中沒有 progress 資料，強制重新載入');
             // 如果 API 沒有返回進度，強制重新載入
@@ -217,10 +221,15 @@ function Home() {
           const result = await completeOnboardingTask('recipe_view');
           console.log('📊 recipe_view completeOnboardingTask 完整回應:', result);
           
-          if (result?.data?.progress) {
-            console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.data.progress);
-            setOnboardingProgress(result.data.progress);
-            saveProgressToStorage(result.data.progress);
+          if (result?.progress) {
+            console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
+            setOnboardingProgress(result.progress);
+            saveProgressToStorage(result.progress);
+            
+            // 檢查是否顯示慶典
+            if (result.show_celebration) {
+              setCelebrationVisible(true);
+            }
           } else {
             console.log('❌ recipe_view API 回應中沒有 progress 資料，強制重新載入');
             setTimeout(() => {
