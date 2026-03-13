@@ -358,8 +358,9 @@ function AddFoodItem() {
       }
       
       // 延遲一點導航，確保後端狀態更新完成
+      // 使用 replace 並添加時間戳強制重新載入
       setTimeout(() => {
-        navigate('/');
+        navigate('/', { replace: true, state: { refreshOnboarding: true, timestamp: Date.now() } });
       }, 100);
     } catch (error) {
       console.error('新增食材失敗:', error);

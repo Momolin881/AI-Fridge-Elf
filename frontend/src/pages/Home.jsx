@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Layout,
   List,
@@ -34,6 +34,7 @@ const { Option } = Select;
 
 function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [foodItems, setFoodItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
@@ -62,6 +63,16 @@ function Home() {
     loadData();
     loadOnboardingData();
   }, [filter]);
+
+  // 監聽導航狀態變化，從 AddFoodItem 返回時重新載入進度
+  useEffect(() => {
+    if (location.state?.refreshOnboarding) {
+      console.log('🔄 從 AddFoodItem 返回，重新載入新手進度');
+      loadOnboardingData();
+      // 清除狀態避免重複觸發
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   // 監聽頁面焦點和可見性變化，重新載入新手進度
   useEffect(() => {
