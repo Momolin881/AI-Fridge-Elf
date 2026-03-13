@@ -177,10 +177,14 @@ function AddFoodItem() {
           console.log('🎯 新手AI辨識成功，觸發任務：photo_upload');
           const taskResult = await completeOnboardingTask('photo_upload');
           console.log('✅ 新手任務完成：拍照入庫', taskResult);
+          console.log('🔍 taskResult.progress 存在嗎?', !!taskResult.progress);
+          console.log('🔍 taskResult.progress 內容:', taskResult.progress);
           // 直接使用 API 回應中的最新進度，而不是重新載入
           if (taskResult.progress) {
             setOnboardingProgress(taskResult.progress);
             console.log('🔄 已更新本地進度狀態:', taskResult.progress);
+          } else {
+            console.log('❌ taskResult.progress 不存在，無法更新狀態');
           }
         } catch (taskError) {
           console.error('❌ 新手任務完成失敗:', taskError);
