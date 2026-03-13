@@ -60,6 +60,7 @@ function Home() {
   const [celebrationVisible, setCelebrationVisible] = useState(false);
   const [skipFocusReload, setSkipFocusReload] = useState(false);
   const [autoDetectRunning, setAutoDetectRunning] = useState(false);
+  const [recentlyUpdated, setRecentlyUpdated] = useState(false);
 
   // localStorage 常數
   const ONBOARDING_STORAGE_KEY = 'ai_fridge_elf_onboarding_progress';
@@ -196,6 +197,12 @@ function Home() {
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
             
+            // 標記為剛更新，防止被 loadOnboardingData 覆蓋
+            setRecentlyUpdated(true);
+            setTimeout(() => {
+              setRecentlyUpdated(false);
+            }, 3000);
+            
             // 檢查是否顯示慶典
             if (result.show_celebration) {
               setCelebrationVisible(true);
@@ -225,6 +232,12 @@ function Home() {
             console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
+            
+            // 標記為剛更新，防止被 loadOnboardingData 覆蓋
+            setRecentlyUpdated(true);
+            setTimeout(() => {
+              setRecentlyUpdated(false);
+            }, 3000);
             
             // 檢查是否顯示慶典
             if (result.show_celebration) {
@@ -256,6 +269,12 @@ function Home() {
   // 載入新手引導資料
   const loadOnboardingData = async () => {
     try {
+      // 如果剛剛更新過進度，跳過此次載入避免覆蓋
+      if (recentlyUpdated) {
+        console.log('🔒 跳過 loadOnboardingData，剛更新過進度');
+        return;
+      }
+      
       // 檢查是否已手動關閉（24小時內）
       try {
         const dismissedData = localStorage.getItem(ONBOARDING_DISMISSED_KEY);
