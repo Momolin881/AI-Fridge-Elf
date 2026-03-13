@@ -85,15 +85,18 @@ const OnboardingCard = ({
   const totalTasks = Object.keys(currentProgress.tasks || {}).length;
   const progressPercentage = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
   
-  console.log('🔍 OnboardingCard 渲染詳情:', {
-    tasks: currentProgress.tasks,
-    photo_upload_completed: currentProgress.tasks?.photo_upload?.completed,
-    mark_consumed_completed: currentProgress.tasks?.mark_consumed?.completed, 
-    recipe_view_completed: currentProgress.tasks?.recipe_view?.completed,
-    completedCount,
-    totalTasks,
-    progressPercentage
-  });
+  // 只在 completedCount 變化時記錄，減少重複日誌
+  useEffect(() => {
+    console.log('🔍 OnboardingCard 渲染詳情:', {
+      tasks: currentProgress.tasks,
+      photo_upload_completed: currentProgress.tasks?.photo_upload?.completed,
+      mark_consumed_completed: currentProgress.tasks?.mark_consumed?.completed, 
+      recipe_view_completed: currentProgress.tasks?.recipe_view?.completed,
+      completedCount,
+      totalTasks,
+      progressPercentage
+    });
+  }, [completedCount]);
 
   // 任務配置 - 按照邏輯順序排列
   const tasks = [
