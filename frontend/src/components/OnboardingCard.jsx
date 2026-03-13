@@ -95,28 +95,31 @@ const OnboardingCard = ({
     progressPercentage
   });
 
-  // 任務配置
+  // 任務配置 - 按照邏輯順序排列
   const tasks = [
     {
       key: 'photo_upload',
       icon: '📸',
       doneIcon: '✅',
       title: '拍照入庫',
-      description: '使用AI辨識食材'
+      description: '使用AI辨識食材',
+      step: 1
+    },
+    {
+      key: 'recipe_view',
+      icon: '🍳',
+      doneIcon: '✅', 
+      title: 'AI食譜',
+      description: '查看智能推薦',
+      step: 2
     },
     {
       key: 'mark_consumed',
       icon: '✅',
       doneIcon: '✅',
       title: '標記用完',
-      description: '移出已使用食材'
-    },
-    {
-      key: 'recipe_view',
-      icon: '🍳',
-      doneIcon: '✅',
-      title: 'AI食譜',
-      description: '查看智能推薦'
+      description: '移出已使用食材',
+      step: 3
     }
   ];
 

@@ -173,27 +173,25 @@ function Home() {
     };
   }, [skipFocusReload]);
   
-  // 自動檢測任務完成狀態
+  // 自動檢測任務完成狀態 - 按順序處理，避免狀態覆蓋
   const autoDetectTaskCompletion = async () => {
     if (!onboardingProgress || onboardingProgress.is_completed || autoDetectRunning) {
       return;
     }
     
     setAutoDetectRunning(true);
-    let hasChanges = false;
     
     try {
-      // 檢測任務1：photo_upload - 是否有含圖片的食材
+      // 任務1：拍照入庫 - 優先檢測
       if (!onboardingProgress.tasks.photo_upload?.completed) {
         const hasImageItem = foodItems.some(item => item.image_url && item.image_url.trim() !== '');
         if (hasImageItem) {
           console.log('🔍 自動檢測到已有含圖片的食材，完成 photo_upload 任務');
           const result = await completeOnboardingTask('photo_upload');
-          console.log('📊 completeOnboardingTask 完整回應:', result);
-          console.log('📊 result.progress:', result?.progress);
+          console.log('📊 photo_upload 完整回應:', result);
           
           if (result?.progress) {
-            console.log('🔄 直接更新進度狀態，新狀態:', result.progress);
+            console.log('🔄 直接更新 photo_upload 進度狀態，新狀態:', result.progress);
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
             
@@ -207,26 +205,24 @@ function Home() {
             if (result.show_celebration) {
               setCelebrationVisible(true);
             }
-          } else {
-            console.log('❌ API 回應中沒有 progress 資料，強制重新載入');
-            // 如果 API 沒有返回進度，強制重新載入
-            setTimeout(() => {
-              loadOnboardingData();
-            }, 500);
           }
-          hasChanges = true;
+          console.log('✅ photo_upload 任務處理完成，等待下次檢測其他任務');
+          return; // 完成一個任務後立即返回，避免同時處理多個任務
         }
       }
       
-      // 檢測任務3：recipe_view - 是否查看過食譜
-      if (!onboardingProgress.tasks.recipe_view?.completed && recipeCategoryCounts) {
+      // 任務2：查看AI食譜 - 只有在拍照任務完成且有食材時才檢測
+      if (onboardingProgress.tasks.photo_upload?.completed && 
+          !onboardingProgress.tasks.recipe_view?.completed && 
+          recipeCategoryCounts && 
+          foodItems.length > 0) {
         const hasViewedRecipes = recipeCategoryCounts.favorites > 0 || 
                                 recipeCategoryCounts['常煮'] > 0 || 
                                 recipeCategoryCounts.pro > 0;
         if (hasViewedRecipes) {
           console.log('🔍 自動檢測到已查看過食譜，完成 recipe_view 任務');
           const result = await completeOnboardingTask('recipe_view');
-          console.log('📊 recipe_view completeOnboardingTask 完整回應:', result);
+          console.log('📊 recipe_view 完整回應:', result);
           
           if (result?.progress) {
             console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
@@ -243,26 +239,21 @@ function Home() {
             if (result.show_celebration) {
               setCelebrationVisible(true);
             }
-          } else {
-            console.log('❌ recipe_view API 回應中沒有 progress 資料，強制重新載入');
-            setTimeout(() => {
-              loadOnboardingData();
-            }, 500);
           }
-          hasChanges = true;
+          console.log('✅ recipe_view 任務處理完成');
+          return; // 完成任務後返回
         }
       }
       
-      if (hasChanges) {
-        console.log('✅ 自動檢測完成，已更新進度');
-      }
+      // 任務3是手動的 mark_consumed，不在自動檢測中處理
+      console.log('🔍 自動檢測：沒有發現需要完成的任務');
     } catch (error) {
       console.log('自動檢測任務失敗:', error);
     } finally {
-      // 1秒後重置檢測標記
+      // 1.5秒後重置檢測標記，給狀態更新更多時間
       setTimeout(() => {
         setAutoDetectRunning(false);
-      }, 1000);
+      }, 1500);
     }
   };
 
@@ -469,13 +460,29 @@ function Home() {
         try {
           console.log('🔍 呼叫 completeOnboardingTask(mark_consumed)');
           const result = await completeOnboardingTask('mark_consumed');
-          console.log('🔍 completeOnboardingTask 回應:', result);
-          if (result.data?.show_celebration) {
-            setCelebrationVisible(true);
+          console.log('🔍 mark_consumed completeOnboardingTask 完整回應:', result);
+          
+          if (result?.progress) {
+            console.log('🔄 直接更新 mark_consumed 進度狀態，新狀態:', result.progress);
+            setOnboardingProgress(result.progress);
+            saveProgressToStorage(result.progress);
+            
+            // 標記為剛更新，防止被 loadOnboardingData 覆蓋
+            setRecentlyUpdated(true);
+            setTimeout(() => {
+              setRecentlyUpdated(false);
+            }, 3000);
+            
+            // 檢查是否顯示慶典
+            if (result.show_celebration) {
+              setCelebrationVisible(true);
+            }
+          } else {
+            console.log('❌ mark_consumed API 回應中沒有 progress 資料，強制重新載入');
+            setTimeout(() => {
+              loadOnboardingData();
+            }, 500);
           }
-          // 重新載入新手進度
-          console.log('🔍 重新載入新手進度');
-          await loadOnboardingData();
         } catch (error) {
           console.log('更新新手進度失敗:', error);
         }
