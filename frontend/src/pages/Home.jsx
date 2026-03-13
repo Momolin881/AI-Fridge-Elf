@@ -210,8 +210,10 @@ function Home() {
             saveProgressToStorage(result.progress);
             
             // 標記為剛更新，防止被 loadOnboardingData 覆蓋
+            console.log('🔒 設定 recentlyUpdated = true，3秒後重置');
             setRecentlyUpdated(true);
             setTimeout(() => {
+              console.log('🔓 重置 recentlyUpdated = false');
               setRecentlyUpdated(false);
             }, 3000);
             
@@ -242,6 +244,7 @@ function Home() {
   // 載入新手引導資料
   const loadOnboardingData = async () => {
     try {
+      console.log('🔍 loadOnboardingData 被呼叫，recentlyUpdated =', recentlyUpdated);
       // 如果剛剛更新過進度，跳過此次載入避免覆蓋
       if (recentlyUpdated) {
         console.log('🔒 跳過 loadOnboardingData，剛更新過進度');
@@ -464,8 +467,10 @@ function Home() {
             saveProgressToStorage(result.progress);
             
             // 標記為剛更新，防止被 loadOnboardingData 覆蓋
+            console.log('🔒 設定 recentlyUpdated = true，3秒後重置');
             setRecentlyUpdated(true);
             setTimeout(() => {
+              console.log('🔓 重置 recentlyUpdated = false');
               setRecentlyUpdated(false);
             }, 3000);
             
