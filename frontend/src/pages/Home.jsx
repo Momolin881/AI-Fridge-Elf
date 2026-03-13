@@ -216,44 +216,7 @@ function Home() {
         }
       }
       
-      // 任務2：查看AI食譜 - 只有在拍照任務完成且有食材時才檢測
-      if (onboardingProgress.tasks.photo_upload?.completed && 
-          !onboardingProgress.tasks.recipe_view?.completed && 
-          recipeCategoryCounts && 
-          foodItems.length > 0) {
-        const hasViewedRecipes = recipeCategoryCounts.favorites > 0 || 
-                                recipeCategoryCounts['常煮'] > 0 || 
-                                recipeCategoryCounts.pro > 0;
-        if (hasViewedRecipes) {
-          console.log('🔍 自動檢測到已查看過食譜，完成 recipe_view 任務');
-          const result = await completeOnboardingTask('recipe_view');
-          console.log('📊 recipe_view 完整回應:', result);
-          
-          if (result?.progress) {
-            console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
-            console.log('📋 recipe_view 任務狀態詳細:', {
-              photo_upload: result.progress.tasks?.photo_upload,
-              mark_consumed: result.progress.tasks?.mark_consumed,
-              recipe_view: result.progress.tasks?.recipe_view
-            });
-            setOnboardingProgress(result.progress);
-            saveProgressToStorage(result.progress);
-            
-            // 標記為剛更新，防止被 loadOnboardingData 覆蓋
-            setRecentlyUpdated(true);
-            setTimeout(() => {
-              setRecentlyUpdated(false);
-            }, 3000);
-            
-            // 檢查是否顯示慶典
-            if (result.show_celebration) {
-              setCelebrationVisible(true);
-            }
-          }
-          console.log('✅ recipe_view 任務處理完成');
-          return; // 完成任務後返回
-        }
-      }
+      // 任務2：查看AI食譜 - 改為手動點擊「食譜推薦」按鈕觸發，不在自動檢測中處理
       
       // 任務3是手動的 mark_consumed，不在自動檢測中處理
       console.log('🔍 自動檢測：沒有發現需要完成的任務');
@@ -724,7 +687,40 @@ function Home() {
                   type="primary"
                   size="small"
                   icon={<BulbOutlined />}
-                  onClick={() => {
+                  onClick={async () => {
+                    // 觸發新手任務2：查看AI食譜
+                    if (onboardingProgress && !onboardingProgress.tasks.recipe_view?.completed) {
+                      try {
+                        console.log('🔍 點擊食譜推薦按鈕，完成 recipe_view 任務');
+                        const result = await completeOnboardingTask('recipe_view');
+                        console.log('📊 recipe_view 按鈕完整回應:', result);
+                        
+                        if (result?.progress) {
+                          console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
+                          console.log('📋 recipe_view 按鈕任務狀態詳細:', {
+                            photo_upload: result.progress.tasks?.photo_upload,
+                            mark_consumed: result.progress.tasks?.mark_consumed,
+                            recipe_view: result.progress.tasks?.recipe_view
+                          });
+                          setOnboardingProgress(result.progress);
+                          saveProgressToStorage(result.progress);
+                          
+                          // 標記為剛更新，防止被 loadOnboardingData 覆蓋
+                          setRecentlyUpdated(true);
+                          setTimeout(() => {
+                            setRecentlyUpdated(false);
+                          }, 3000);
+                          
+                          // 檢查是否顯示慶典
+                          if (result.show_celebration) {
+                            setCelebrationVisible(true);
+                          }
+                        }
+                      } catch (error) {
+                        console.log('完成食譜推薦任務失敗:', error);
+                      }
+                    }
+                    
                     // 檢查是否有收藏食譜
                     const totalRecipes = recipeCategoryCounts.favorites + recipeCategoryCounts['常煮'] + recipeCategoryCounts.pro;
                     if (totalRecipes === 0) {
