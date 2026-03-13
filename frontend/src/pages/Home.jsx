@@ -59,6 +59,7 @@ function Home() {
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [celebrationVisible, setCelebrationVisible] = useState(false);
   const [skipFocusReload, setSkipFocusReload] = useState(false);
+  const [autoDetectRunning, setAutoDetectRunning] = useState(false);
 
   // localStorage 常數
   const ONBOARDING_STORAGE_KEY = 'ai_fridge_elf_onboarding_progress';
@@ -100,12 +101,16 @@ function Home() {
     loadOnboardingData();
   }, [filter]);
 
-  // 當資料載入完成後，觸發自動檢測
+  // 當資料載入完成後，觸發自動檢測（僅在首次載入或新增食材時）
   useEffect(() => {
-    if (foodItems.length > 0 && onboardingProgress && recipeCategoryCounts) {
-      autoDetectTaskCompletion();
+    if (foodItems.length > 0 && onboardingProgress && !onboardingProgress.is_completed && !autoDetectRunning) {
+      // 延遲檢測，避免頻繁觸發
+      const timer = setTimeout(() => {
+        autoDetectTaskCompletion();
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [foodItems, onboardingProgress, recipeCategoryCounts]);
+  }, [foodItems.length, onboardingProgress?.is_completed, recipeCategoryCounts]);
 
   // 監聽導航狀態變化，從 AddFoodItem 返回時使用傳遞的進度資料
   useEffect(() => {
@@ -169,10 +174,11 @@ function Home() {
   
   // 自動檢測任務完成狀態
   const autoDetectTaskCompletion = async () => {
-    if (!onboardingProgress || onboardingProgress.is_completed) {
+    if (!onboardingProgress || onboardingProgress.is_completed || autoDetectRunning) {
       return;
     }
     
+    setAutoDetectRunning(true);
     let hasChanges = false;
     
     try {
@@ -181,7 +187,12 @@ function Home() {
         const hasImageItem = foodItems.some(item => item.image_url && item.image_url.trim() !== '');
         if (hasImageItem) {
           console.log('🔍 自動檢測到已有含圖片的食材，完成 photo_upload 任務');
-          await completeOnboardingTask('photo_upload');
+          const result = await completeOnboardingTask('photo_upload');
+          if (result?.data?.progress) {
+            console.log('🔄 直接更新進度狀態');
+            setOnboardingProgress(result.data.progress);
+            saveProgressToStorage(result.data.progress);
+          }
           hasChanges = true;
         }
       }
@@ -193,19 +204,26 @@ function Home() {
                                 recipeCategoryCounts.pro > 0;
         if (hasViewedRecipes) {
           console.log('🔍 自動檢測到已查看過食譜，完成 recipe_view 任務');
-          await completeOnboardingTask('recipe_view');
+          const result = await completeOnboardingTask('recipe_view');
+          if (result?.data?.progress) {
+            console.log('🔄 直接更新進度狀態');
+            setOnboardingProgress(result.data.progress);
+            saveProgressToStorage(result.data.progress);
+          }
           hasChanges = true;
         }
       }
       
-      // 如果有變化，重新載入進度
       if (hasChanges) {
-        setTimeout(() => {
-          loadOnboardingData();
-        }, 1000);
+        console.log('✅ 自動檢測完成，已更新進度');
       }
     } catch (error) {
       console.log('自動檢測任務失敗:', error);
+    } finally {
+      // 1秒後重置檢測標記
+      setTimeout(() => {
+        setAutoDetectRunning(false);
+      }, 1000);
     }
   };
 
