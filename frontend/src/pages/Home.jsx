@@ -232,12 +232,12 @@ function Home() {
             saveProgressToStorage(result.progress);
             
             // 標記為剛更新，防止被 loadOnboardingData 覆蓋
-            console.log('🔒 設定 recentlyUpdated = true，3秒後重置');
+            console.log('🔒 設定 recentlyUpdated = true，10秒後重置');
             setRecentlyUpdated(true);
             setTimeout(() => {
               console.log('🔓 重置 recentlyUpdated = false');
               setRecentlyUpdated(false);
-            }, 3000);
+            }, 10000);
             
             // 檢查是否顯示慶典
             if (result.show_celebration) {
@@ -270,6 +270,15 @@ function Home() {
       // 如果剛剛更新過進度，跳過此次載入避免覆蓋
       if (recentlyUpdated) {
         console.log('🔒 跳過 loadOnboardingData，剛更新過進度');
+        return;
+      }
+      
+      // 檢查 localStorage 中的最近更新時間，如果在10秒內則跳過 API 呼叫
+      const storedProgress = getProgressFromStorage();
+      if (storedProgress && storedProgress.lastUpdated && (Date.now() - storedProgress.lastUpdated) < 10000) {
+        console.log('🔒 跳過 API 載入，使用最近的 localStorage 資料');
+        setOnboardingProgress(storedProgress);
+        setShowOnboarding(true);
         return;
       }
       
@@ -489,12 +498,12 @@ function Home() {
             saveProgressToStorage(result.progress);
             
             // 標記為剛更新，防止被 loadOnboardingData 覆蓋
-            console.log('🔒 設定 recentlyUpdated = true，3秒後重置');
+            console.log('🔒 設定 recentlyUpdated = true，10秒後重置');
             setRecentlyUpdated(true);
             setTimeout(() => {
               console.log('🔓 重置 recentlyUpdated = false');
               setRecentlyUpdated(false);
-            }, 3000);
+            }, 10000);
             
             // 檢查是否顯示慶典
             if (result.show_celebration) {
