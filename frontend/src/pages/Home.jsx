@@ -99,8 +99,15 @@ function Home() {
 
   useEffect(() => {
     loadData();
-    loadOnboardingData();
-  }, [filter]);
+    
+    // 檢查是否剛更新過新手進度，如果是則跳過載入
+    if (!recentlyUpdated) {
+      console.log('🔄 filter 變化，載入新手進度');
+      loadOnboardingData();
+    } else {
+      console.log('🔒 filter 變化但跳過載入新手進度，因為剛剛更新過');
+    }
+  }, [filter, recentlyUpdated]);
 
   // 當資料載入完成後，觸發自動檢測（僅在首次載入或新增食材時）
   useEffect(() => {
@@ -134,7 +141,11 @@ function Home() {
         }, 5000);
       } else {
         console.log('🔄 沒有傳遞進度資料，重新載入');
-        loadOnboardingData();
+        if (!recentlyUpdated) {
+          loadOnboardingData();
+        } else {
+          console.log('🔒 跳過重新載入（剛更新過進度）');
+        }
       }
       
       // 清除狀態避免重複觸發
@@ -149,6 +160,10 @@ function Home() {
         console.log('🔒 跳過焦點重新載入（剛使用傳遞的資料）');
         return;
       }
+      if (recentlyUpdated) {
+        console.log('🔒 跳過焦點重新載入（剛更新過進度）');
+        return;
+      }
       console.log('頁面重新獲得焦點，重新載入新手進度');
       loadOnboardingData();
     };
@@ -157,6 +172,10 @@ function Home() {
       if (!document.hidden) {
         if (skipFocusReload) {
           console.log('🔒 跳過可見性重新載入（剛使用傳遞的資料）');
+          return;
+        }
+        if (recentlyUpdated) {
+          console.log('🔒 跳過可見性重新載入（剛更新過進度）');
           return;
         }
         console.log('頁面變為可見，重新載入新手進度');
@@ -481,7 +500,11 @@ function Home() {
           } else {
             console.log('❌ mark_consumed API 回應中沒有 progress 資料，強制重新載入');
             setTimeout(() => {
-              loadOnboardingData();
+              if (!recentlyUpdated) {
+                loadOnboardingData();
+              } else {
+                console.log('🔒 跳過強制重新載入（剛更新過進度）');
+              }
             }, 500);
           }
         } catch (error) {
@@ -717,6 +740,8 @@ function Home() {
                         console.log('🔍 點擊食譜推薦按鈕，完成 recipe_view 任務');
                         const result = await completeOnboardingTask('recipe_view');
                         console.log('📊 recipe_view 按鈕完整回應:', result);
+                        console.log('🔍 檢查 result?.progress:', !!result?.progress, result?.progress);
+                        console.log('🔍 檢查 result.progress:', !!result.progress, result.progress);
                         
                         if (result?.progress) {
                           console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
@@ -734,19 +759,37 @@ function Home() {
                               completed_at: result.progress.tasks?.recipe_view?.completed_at
                             }
                           });
+                          
+                          console.log('⚡ 步驟 1: 即將呼叫 setOnboardingProgress');
                           setOnboardingProgress(result.progress);
+                          console.log('⚡ 步驟 2: setOnboardingProgress 完成');
+                          
+                          console.log('⚡ 步驟 3: 即將呼叫 saveProgressToStorage');
                           saveProgressToStorage(result.progress);
+                          console.log('⚡ 步驟 4: saveProgressToStorage 完成');
                           
                           // 標記為剛更新，防止被 loadOnboardingData 覆蓋
+                          console.log('⚡ 步驟 5: 即將設定 recentlyUpdated = true');
+                          console.log('🔒 設定 recentlyUpdated = true，3秒後重置');
                           setRecentlyUpdated(true);
+                          console.log('⚡ 步驟 6: setRecentlyUpdated(true) 完成');
+                          
                           setTimeout(() => {
+                            console.log('🔓 重置 recentlyUpdated = false');
                             setRecentlyUpdated(false);
                           }, 3000);
+                          console.log('⚡ 步驟 7: setTimeout 設定完成');
                           
                           // 檢查是否顯示慶典
+                          console.log('⚡ 步驟 8: 檢查慶典顯示，show_celebration:', result.show_celebration);
                           if (result.show_celebration) {
+                            console.log('⚡ 步驟 9: 顯示慶典');
                             setCelebrationVisible(true);
                           }
+                          
+                          console.log('⚡ 所有步驟完成');
+                        } else {
+                          console.log('❌ result?.progress 為 false，無法更新進度');
                         }
                       } catch (error) {
                         console.log('完成食譜推薦任務失敗:', error);
