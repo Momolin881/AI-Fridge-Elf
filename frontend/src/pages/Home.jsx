@@ -60,10 +60,52 @@ function Home() {
   const [celebrationVisible, setCelebrationVisible] = useState(false);
   const [skipFocusReload, setSkipFocusReload] = useState(false);
 
+  // localStorage 常數
+  const ONBOARDING_STORAGE_KEY = 'ai_fridge_elf_onboarding_progress';
+  const ONBOARDING_DISMISSED_KEY = 'ai_fridge_elf_onboarding_dismissed';
+
+  // 保存進度到 localStorage
+  const saveProgressToStorage = (progress) => {
+    try {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify({
+        ...progress,
+        lastUpdated: Date.now()
+      }));
+      console.log('💾 進度已保存到 localStorage');
+    } catch (error) {
+      console.log('保存到 localStorage 失敗:', error);
+    }
+  };
+
+  // 從 localStorage 讀取進度
+  const getProgressFromStorage = () => {
+    try {
+      const stored = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        // 檢查是否為最近的資料（24小時內）
+        if (data.lastUpdated && (Date.now() - data.lastUpdated) < 24 * 60 * 60 * 1000) {
+          console.log('📱 從 localStorage 讀取進度:', data);
+          return data;
+        }
+      }
+    } catch (error) {
+      console.log('從 localStorage 讀取失敗:', error);
+    }
+    return null;
+  };
+
   useEffect(() => {
     loadData();
     loadOnboardingData();
   }, [filter]);
+
+  // 當資料載入完成後，觸發自動檢測
+  useEffect(() => {
+    if (foodItems.length > 0 && onboardingProgress && recipeCategoryCounts) {
+      autoDetectTaskCompletion();
+    }
+  }, [foodItems, onboardingProgress, recipeCategoryCounts]);
 
   // 監聽導航狀態變化，從 AddFoodItem 返回時使用傳遞的進度資料
   useEffect(() => {
@@ -125,9 +167,65 @@ function Home() {
     };
   }, [skipFocusReload]);
   
+  // 自動檢測任務完成狀態
+  const autoDetectTaskCompletion = async () => {
+    if (!onboardingProgress || onboardingProgress.is_completed) {
+      return;
+    }
+    
+    let hasChanges = false;
+    
+    try {
+      // 檢測任務1：photo_upload - 是否有含圖片的食材
+      if (!onboardingProgress.tasks.photo_upload?.completed) {
+        const hasImageItem = foodItems.some(item => item.image_url && item.image_url.trim() !== '');
+        if (hasImageItem) {
+          console.log('🔍 自動檢測到已有含圖片的食材，完成 photo_upload 任務');
+          await completeOnboardingTask('photo_upload');
+          hasChanges = true;
+        }
+      }
+      
+      // 檢測任務3：recipe_view - 是否查看過食譜
+      if (!onboardingProgress.tasks.recipe_view?.completed && recipeCategoryCounts) {
+        const hasViewedRecipes = recipeCategoryCounts.favorites > 0 || 
+                                recipeCategoryCounts['常煮'] > 0 || 
+                                recipeCategoryCounts.pro > 0;
+        if (hasViewedRecipes) {
+          console.log('🔍 自動檢測到已查看過食譜，完成 recipe_view 任務');
+          await completeOnboardingTask('recipe_view');
+          hasChanges = true;
+        }
+      }
+      
+      // 如果有變化，重新載入進度
+      if (hasChanges) {
+        setTimeout(() => {
+          loadOnboardingData();
+        }, 1000);
+      }
+    } catch (error) {
+      console.log('自動檢測任務失敗:', error);
+    }
+  };
+
   // 載入新手引導資料
   const loadOnboardingData = async () => {
     try {
+      // 檢查是否已手動關閉（24小時內）
+      try {
+        const dismissedData = localStorage.getItem(ONBOARDING_DISMISSED_KEY);
+        if (dismissedData) {
+          const { dismissed, dismissedAt } = JSON.parse(dismissedData);
+          if (dismissed && (Date.now() - dismissedAt) < 24 * 60 * 60 * 1000) {
+            console.log('📱 新手卡片在24小時內已被關閉，跳過顯示');
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('檢查關閉狀態失敗:', e);
+      }
+      
       const shouldShow = await shouldShowOnboardingTutorial();
       if (shouldShow.should_show) {
         setShowOnboarding(true);
@@ -142,35 +240,61 @@ function Home() {
           const progressData = progress.data?.data || progress.data;
           console.log('🔍 loadOnboardingData - 最終使用的資料:', progressData);
           setOnboardingProgress(progressData);
+          
+          // 保存到 localStorage 作為備份
+          if (progressData) {
+            saveProgressToStorage(progressData);
+          }
         } catch (progressError) {
-          console.log('載入新手進度失敗，使用預設值:', progressError);
-          // 設定預設進度，確保卡片能顯示
-          setOnboardingProgress({
-            is_completed: false,
-            completed_at: null,
-            tasks: {
-              photo_upload: { completed: false, completed_at: null },
-              mark_consumed: { completed: false, completed_at: null },
-              recipe_view: { completed: false, completed_at: null }
-            },
-            achievement_sent: false
-          });
+          console.log('載入新手進度失敗，嘗試使用 localStorage 備份:', progressError);
+          
+          // 嘗試從 localStorage 讀取備份
+          const storedProgress = getProgressFromStorage();
+          if (storedProgress) {
+            console.log('📱 使用 localStorage 備份資料');
+            setOnboardingProgress(storedProgress);
+          } else {
+            console.log('💾 沒有有效的備份，使用預設值');
+            // 設定預設進度，確保卡片能顯示
+            const defaultProgress = {
+              is_completed: false,
+              completed_at: null,
+              tasks: {
+                photo_upload: { completed: false, completed_at: null },
+                mark_consumed: { completed: false, completed_at: null },
+                recipe_view: { completed: false, completed_at: null }
+              },
+              achievement_sent: false
+            };
+            setOnboardingProgress(defaultProgress);
+            saveProgressToStorage(defaultProgress);
+          }
         }
       }
     } catch (error) {
       console.log('檢查新手教學狀態失敗:', error);
       // 封測期間：如果 API 失敗，仍然顯示新手教學
       setShowOnboarding(true);
-      setOnboardingProgress({
-        is_completed: false,
-        completed_at: null,
-        tasks: {
-          photo_upload: { completed: false, completed_at: null },
-          mark_consumed: { completed: false, completed_at: null },
-          recipe_view: { completed: false, completed_at: null }
-        },
-        achievement_sent: false
-      });
+      
+      // 嘗試使用 localStorage 備份
+      const storedProgress = getProgressFromStorage();
+      if (storedProgress) {
+        console.log('📱 API失敗，使用 localStorage 備份資料');
+        setOnboardingProgress(storedProgress);
+      } else {
+        const defaultProgress = {
+          is_completed: false,
+          completed_at: null,
+          tasks: {
+            photo_upload: { completed: false, completed_at: null },
+            mark_consumed: { completed: false, completed_at: null },
+            recipe_view: { completed: false, completed_at: null }
+          },
+          achievement_sent: false
+        };
+        setOnboardingProgress(defaultProgress);
+        saveProgressToStorage(defaultProgress);
+      }
     }
   };
 
@@ -416,6 +540,16 @@ function Home() {
   // 處理新手引導卡片關閉
   const handleOnboardingClose = () => {
     setShowOnboarding(false);
+    // 保存關閉狀態到 localStorage（24小時內不再顯示）
+    try {
+      localStorage.setItem(ONBOARDING_DISMISSED_KEY, JSON.stringify({
+        dismissed: true,
+        dismissedAt: Date.now()
+      }));
+      console.log('💾 新手卡片關閉狀態已保存');
+    } catch (error) {
+      console.log('保存關閉狀態失敗:', error);
+    }
   };
 
   // 處理成就慶典確認

@@ -1,15 +1,62 @@
 /**
  * 新手三部曲卡片組件
  * 
- * 顯示新手進度和任務狀態，淺色系設計
+ * 顯示新手進度和任務狀態，整合 SVG 圓環進度 + 撒花特效
  */
 
 import { useState, useEffect } from 'react';
-import { Card, Progress, Space, Button, Typography } from 'antd';
+import { Card, Space, Button, Typography } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import './OnboardingCard.css';
 
 const { Title, Text } = Typography;
+
+// SVG 圓環進度組件
+const ProgressRing = ({ completed }) => {
+  const r = 20;
+  const circumference = 2 * Math.PI * r;
+  
+  return (
+    <svg className="onboarding-card__ring-svg" width="48" height="48" viewBox="0 0 48 48">
+      <circle 
+        className="onboarding-card__ring-bg" 
+        cx="24" cy="24" r={r}
+        fill="none"
+        stroke="#f0f0f0"
+        strokeWidth="3"
+      />
+      <circle
+        className={`onboarding-card__ring-progress${completed ? ' onboarding-card__ring-progress--done' : ''}`}
+        cx="24" cy="24" r={r}
+        fill="none"
+        stroke={completed ? "#52c41a" : "#d9d9d9"}
+        strokeWidth="3"
+        strokeDasharray={circumference}
+        strokeDashoffset={completed ? 0 : circumference}
+        transform="rotate(-90 24 24)"
+      />
+    </svg>
+  );
+};
+
+// 撒花特效組件
+const Confetti = () => {
+  return (
+    <div className="onboarding-card__confetti">
+      {Array.from({ length: 30 }).map((_, i) => (
+        <div 
+          key={i} 
+          className="onboarding-card__confetti-piece" 
+          style={{ 
+            left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 2}s`,
+            backgroundColor: ['#52c41a', '#1890ff', '#fadb14', '#f5222d', '#722ed1'][Math.floor(Math.random() * 5)]
+          }} 
+        />
+      ))}
+    </div>
+  );
+};
 
 const OnboardingCard = ({ 
   onClose, 
@@ -53,22 +100,39 @@ const OnboardingCard = ({
     {
       key: 'photo_upload',
       icon: '📸',
+      doneIcon: '✅',
       title: '拍照入庫',
       description: '使用AI辨識食材'
     },
     {
       key: 'mark_consumed',
       icon: '✅',
+      doneIcon: '✅',
       title: '標記用完',
       description: '移出已使用食材'
     },
     {
       key: 'recipe_view',
       icon: '🍳',
+      doneIcon: '✅',
       title: 'AI食譜',
       description: '查看智能推薦'
     }
   ];
+
+  // 檢查是否剛完成所有任務（用於觸發撒花）
+  const allCompleted = completedCount === totalTasks;
+  const [celebrationShown, setCelebrationShown] = useState(false);
+  
+  useEffect(() => {
+    if (allCompleted && !celebrationShown) {
+      setCelebrationShown(true);
+      // 3秒後自動關閉撒花效果
+      setTimeout(() => {
+        setCelebrationShown(false);
+      }, 3000);
+    }
+  }, [allCompleted, celebrationShown]);
 
   // 如果已完成或不可見，不渲染
   if (!isVisible || currentProgress.is_completed) {
@@ -77,6 +141,9 @@ const OnboardingCard = ({
 
   return (
     <Card className="onboarding-card">
+      {/* 撒花特效 - 只在完成所有任務時顯示 */}
+      {allCompleted && celebrationShown && <Confetti />}
+      
       {/* 標題區域 */}
       <div className="onboarding-header">
         <div className="onboarding-title">
@@ -95,15 +162,18 @@ const OnboardingCard = ({
       {/* 副標題 */}
       <Text className="subtitle">冰友挑戰:解鎖任務，馬上使用</Text>
 
-      {/* 任務區域 */}
+      {/* 任務區域 - 使用 SVG 圓環設計 */}
       <div className="tasks-container">
         <Space size="large" className="tasks-row">
           {tasks.map((task) => {
             const isCompleted = currentProgress.tasks[task.key]?.completed || false;
             return (
               <div key={task.key} className="task-item">
-                <div className={`task-circle ${isCompleted ? 'completed' : 'pending'}`}>
-                  <span className="task-icon">{task.icon}</span>
+                <div className="task-ring-wrapper">
+                  <ProgressRing completed={isCompleted} />
+                  <span className="task-icon-overlay">
+                    {isCompleted ? task.doneIcon : task.icon}
+                  </span>
                 </div>
                 <div className="task-info">
                   <Text strong className="task-title">{task.title}</Text>
@@ -115,19 +185,20 @@ const OnboardingCard = ({
         </Space>
       </div>
 
-      {/* 進度條 */}
+      {/* 進度統計文字 */}
       <div className="progress-section">
-        <Progress 
-          percent={progressPercentage}
-          strokeColor="#52c41a"
-          trailColor="#f0f0f0"
-          size="small"
-          format={() => `${completedCount}/${totalTasks}`}
-        />
         <Text className="progress-text">
           已完成 {completedCount} / {totalTasks} 項任務
+          {allCompleted && <span className="completion-badge"> 🎊 全部完成！</span>}
         </Text>
       </div>
+      
+      {/* 完成慶祝訊息 */}
+      {allCompleted && (
+        <div className="celebration-message">
+          <Text strong style={{ color: '#52c41a' }}>🏆 恭喜完成新手三部曲！解鎖所有功能</Text>
+        </div>
+      )}
     </Card>
   );
 };
