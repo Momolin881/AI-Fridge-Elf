@@ -360,6 +360,7 @@ function AddFoodItem() {
       // 延遲一點導航，確保後端狀態更新完成
       // 直接傳遞最新的進度資料，不依賴重新查詢
       setTimeout(() => {
+        console.log('📤 準備傳遞的進度資料:', onboardingProgress);
         navigate('/', { 
           replace: true, 
           state: { 

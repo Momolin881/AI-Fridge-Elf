@@ -67,7 +67,9 @@ function Home() {
   // 監聽導航狀態變化，從 AddFoodItem 返回時使用傳遞的進度資料
   useEffect(() => {
     if (location.state?.refreshOnboarding) {
-      console.log('🔄 從 AddFoodItem 返回，使用傳遞的新手進度');
+      console.log('🔄 從 AddFoodItem 返回，檢查傳遞的狀態');
+      console.log('📨 location.state:', location.state);
+      console.log('📊 location.state.onboardingProgress:', location.state.onboardingProgress);
       
       // 如果有傳遞進度資料，直接使用，否則重新載入
       if (location.state.onboardingProgress) {
