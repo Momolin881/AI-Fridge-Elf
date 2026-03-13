@@ -177,6 +177,8 @@ function AddFoodItem() {
           console.log('🎯 新手AI辨識成功，觸發任務：photo_upload');
           await completeOnboardingTask('photo_upload');
           console.log('✅ 新手任務完成：拍照入庫');
+          // 重新載入進度狀態
+          await loadOnboardingData();
         } catch (taskError) {
           console.error('❌ 新手任務完成失敗:', taskError);
         }
@@ -217,6 +219,8 @@ function AddFoodItem() {
         try {
           await completeOnboardingTask('photo_upload');
           console.log('✅ 新手任務自動完成：拍照入庫（AI失敗補救）');
+          // 重新載入進度狀態
+          await loadOnboardingData();
         } catch (taskError) {
           console.error('❌ 新手任務自動完成失敗:', taskError);
         }
@@ -264,6 +268,8 @@ function AddFoodItem() {
           console.log('🎯 新手手動上傳成功，觸發任務：photo_upload');
           await completeOnboardingTask('photo_upload');
           console.log('✅ 新手任務完成：拍照入庫（手動上傳）');
+          // 重新載入進度狀態
+          await loadOnboardingData();
         } catch (taskError) {
           console.error('❌ 新手任務完成失敗:', taskError);
         }
@@ -324,12 +330,17 @@ function AddFoodItem() {
           console.log('🎯 新手儲存食材成功，觸發任務：photo_upload');
           await completeOnboardingTask('photo_upload');
           console.log('✅ 新手任務完成：拍照入庫（儲存食材）');
+          // 重新載入進度狀態
+          await loadOnboardingData();
         } catch (error) {
           console.error('❌ 新手任務完成失敗:', error);
         }
       }
       
-      navigate('/');
+      // 延遲一點導航，確保後端狀態更新完成
+      setTimeout(() => {
+        navigate('/');
+      }, 100);
     } catch (error) {
       console.error('新增食材失敗:', error);
       message.error('新增食材失敗，請稍後再試');
