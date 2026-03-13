@@ -358,9 +358,16 @@ function AddFoodItem() {
       }
       
       // 延遲一點導航，確保後端狀態更新完成
-      // 使用 replace 並添加時間戳強制重新載入
+      // 直接傳遞最新的進度資料，不依賴重新查詢
       setTimeout(() => {
-        navigate('/', { replace: true, state: { refreshOnboarding: true, timestamp: Date.now() } });
+        navigate('/', { 
+          replace: true, 
+          state: { 
+            refreshOnboarding: true, 
+            onboardingProgress: onboardingProgress, // 傳遞最新進度
+            timestamp: Date.now() 
+          } 
+        });
       }, 100);
     } catch (error) {
       console.error('新增食材失敗:', error);

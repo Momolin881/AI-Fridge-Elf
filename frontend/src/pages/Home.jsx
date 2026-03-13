@@ -64,11 +64,21 @@ function Home() {
     loadOnboardingData();
   }, [filter]);
 
-  // 監聽導航狀態變化，從 AddFoodItem 返回時重新載入進度
+  // 監聽導航狀態變化，從 AddFoodItem 返回時使用傳遞的進度資料
   useEffect(() => {
     if (location.state?.refreshOnboarding) {
-      console.log('🔄 從 AddFoodItem 返回，重新載入新手進度');
-      loadOnboardingData();
+      console.log('🔄 從 AddFoodItem 返回，使用傳遞的新手進度');
+      
+      // 如果有傳遞進度資料，直接使用，否則重新載入
+      if (location.state.onboardingProgress) {
+        console.log('📋 使用傳遞的進度資料:', location.state.onboardingProgress);
+        setOnboardingProgress(location.state.onboardingProgress);
+        setShowOnboarding(true);
+      } else {
+        console.log('🔄 沒有傳遞進度資料，重新載入');
+        loadOnboardingData();
+      }
+      
       // 清除狀態避免重複觸發
       navigate(location.pathname, { replace: true, state: {} });
     }
