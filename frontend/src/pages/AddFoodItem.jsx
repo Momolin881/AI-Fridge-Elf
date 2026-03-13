@@ -47,6 +47,7 @@ function AddFoodItem() {
   const [manualImageUploading, setManualImageUploading] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const [onboardingProgress, setOnboardingProgress] = useState(null);
+  const [photoTaskCompleted, setPhotoTaskCompleted] = useState(false);
 
   // 簡化的圖片處理函數（避免壓縮導致的問題）
   const processImage = async (file) => {
@@ -170,7 +171,7 @@ function AddFoodItem() {
       setPreviewImageUrl(result.image_url);
       
       // 檢查是否為新手，只有新手才觸發任務
-      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || photoTaskCompleted || false;
       
       if (!isPhotoTaskCompleted) {
         try {
@@ -182,6 +183,7 @@ function AddFoodItem() {
           // 直接使用 API 回應中的最新進度，而不是重新載入
           if (taskResult.progress) {
             setOnboardingProgress(taskResult.progress);
+            setPhotoTaskCompleted(true); // 標記已完成，避免重複執行
             console.log('🔄 已更新本地進度狀態:', taskResult.progress);
           } else {
             console.log('❌ taskResult.progress 不存在，無法更新狀態');
@@ -204,7 +206,7 @@ function AddFoodItem() {
       }
       
       // 檢查是否為新手，如果是新手且AI辨識失敗，發送LINE通知並自動完成任務
-      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || photoTaskCompleted || false;
       
       if (!isPhotoTaskCompleted) {
         console.log('🔸 新手AI辨識失敗，準備發送LINE通知');
@@ -229,6 +231,7 @@ function AddFoodItem() {
           // 直接使用 API 回應中的最新進度
           if (taskResult.progress) {
             setOnboardingProgress(taskResult.progress);
+            setPhotoTaskCompleted(true); // 標記已完成，避免重複執行
             console.log('🔄 已更新本地進度狀態:', taskResult.progress);
           }
         } catch (taskError) {
@@ -271,7 +274,7 @@ function AddFoodItem() {
       message.success({ content: '圖片上傳成功！', key: 'manual-upload' });
       
       // 檢查是否為新手，只有新手才觸發任務
-      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || photoTaskCompleted || false;
       
       if (!isPhotoTaskCompleted) {
         try {
@@ -336,7 +339,7 @@ function AddFoodItem() {
       message.success('新增食材成功！');
       
       // 檢查是否為新手，只有新手且還沒完成拍照任務才觸發
-      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || photoTaskCompleted || false;
       
       if (!isPhotoTaskCompleted) {
         try {
