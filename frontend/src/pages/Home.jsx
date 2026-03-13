@@ -58,6 +58,7 @@ function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [celebrationVisible, setCelebrationVisible] = useState(false);
+  const [skipFocusReload, setSkipFocusReload] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -76,6 +77,13 @@ function Home() {
         console.log('📋 使用傳遞的進度資料:', location.state.onboardingProgress);
         setOnboardingProgress(location.state.onboardingProgress);
         setShowOnboarding(true);
+        
+        // 設定標記，5秒內禁用焦點重新載入
+        setSkipFocusReload(true);
+        setTimeout(() => {
+          setSkipFocusReload(false);
+          console.log('🔓 重新啟用焦點重新載入');
+        }, 5000);
       } else {
         console.log('🔄 沒有傳遞進度資料，重新載入');
         loadOnboardingData();
@@ -89,12 +97,20 @@ function Home() {
   // 監聽頁面焦點和可見性變化，重新載入新手進度
   useEffect(() => {
     const handleFocus = () => {
+      if (skipFocusReload) {
+        console.log('🔒 跳過焦點重新載入（剛使用傳遞的資料）');
+        return;
+      }
       console.log('頁面重新獲得焦點，重新載入新手進度');
       loadOnboardingData();
     };
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
+        if (skipFocusReload) {
+          console.log('🔒 跳過可見性重新載入（剛使用傳遞的資料）');
+          return;
+        }
         console.log('頁面變為可見，重新載入新手進度');
         loadOnboardingData();
       }
