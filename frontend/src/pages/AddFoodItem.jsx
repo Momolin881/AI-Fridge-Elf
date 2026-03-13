@@ -27,7 +27,7 @@ import {
 } from 'antd';
 import { CameraOutlined, FormOutlined, CalendarOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { getFridges, getFridge, recognizeFoodImage, createFoodItem, uploadFoodImage, completeOnboardingTask } from '../services/api';
+import { getFridges, getFridge, recognizeFoodImage, createFoodItem, uploadFoodImage, completeOnboardingTask, getOnboardingProgress } from '../services/api';
 import { ImageUploader, CompartmentSelector, ExpenseCalendarModal } from '../components';
 
 const { Content } = Layout;
@@ -46,6 +46,7 @@ function AddFoodItem() {
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [manualImageUploading, setManualImageUploading] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
+  const [onboardingProgress, setOnboardingProgress] = useState(null);
 
   // 簡化的圖片處理函數（避免壓縮導致的問題）
   const processImage = async (file) => {
@@ -66,6 +67,7 @@ function AddFoodItem() {
 
   useEffect(() => {
     loadFridges();
+    loadOnboardingData();
   }, []);
 
   // 當選擇冰箱時，載入冰箱詳細資料（含分區）
@@ -91,6 +93,17 @@ function AddFoodItem() {
       message.error('載入冰箱失敗，請稍後再試');
     } finally {
       setFridgeLoading(false);
+    }
+  };
+
+  // 載入新手進度資料
+  const loadOnboardingData = async () => {
+    try {
+      const response = await getOnboardingProgress();
+      setOnboardingProgress(response.data);
+    } catch (error) {
+      // 靜默處理，不影響正常功能
+      console.log('載入新手進度失敗:', error);
     }
   };
 
@@ -156,13 +169,17 @@ function AddFoodItem() {
       // 設定預覽圖
       setPreviewImageUrl(result.image_url);
       
-      // 觸發新手任務1：拍照入庫（AI辨識成功即算完成）
-      try {
-        await completeOnboardingTask('photo_upload');
-        // 新手任務1完成：拍照入庫
-      } catch (taskError) {
-        // 靜默處理，不影響正常流程
-        // 更新新手進度失敗 - 靜默處理
+      // 檢查是否為新手，只有新手才觸發任務
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      
+      if (!isPhotoTaskCompleted) {
+        try {
+          console.log('🎯 新手AI辨識成功，觸發任務：photo_upload');
+          await completeOnboardingTask('photo_upload');
+          console.log('✅ 新手任務完成：拍照入庫');
+        } catch (taskError) {
+          console.error('❌ 新手任務完成失敗:', taskError);
+        }
       }
     } catch (error) {
       console.error('AI 辨識失敗:', error);
@@ -175,6 +192,34 @@ function AddFoodItem() {
         errorMessage += ' (網絡錯誤)';
       } else {
         errorMessage += ` (${error.message})`;
+      }
+      
+      // 檢查是否為新手，如果是新手且AI辨識失敗，發送LINE通知並自動完成任務
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      
+      if (!isPhotoTaskCompleted) {
+        console.log('🔸 新手AI辨識失敗，準備發送LINE通知');
+        
+        // 發送LINE@通知給管理員
+        try {
+          if (window.liff && window.liff.isLoggedIn()) {
+            await window.liff.sendMessages([{
+              type: 'text',
+              text: '新手任務-AI辨識失敗'
+            }]);
+            console.log('📤 LINE通知已發送：新手任務-AI辨識失敗');
+          }
+        } catch (lineError) {
+          console.error('❌ LINE通知發送失敗:', lineError);
+        }
+        
+        // 自動完成新手任務，讓用戶不會卡住
+        try {
+          await completeOnboardingTask('photo_upload');
+          console.log('✅ 新手任務自動完成：拍照入庫（AI失敗補救）');
+        } catch (taskError) {
+          console.error('❌ 新手任務自動完成失敗:', taskError);
+        }
       }
       
       message.error({ content: errorMessage, key: 'ai-recognition', duration: 5 });
@@ -211,13 +256,17 @@ function AddFoodItem() {
 
       message.success({ content: '圖片上傳成功！', key: 'manual-upload' });
       
-      // 觸發新手任務1：拍照入庫（手動上傳成功即算完成）
-      try {
-        await completeOnboardingTask('photo_upload');
-        // 新手任務1完成：拍照入庫（手動上傳）
-      } catch (taskError) {
-        // 靜默處理，不影響正常流程
-        // 更新新手進度失敗 - 靜默處理
+      // 檢查是否為新手，只有新手才觸發任務
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      
+      if (!isPhotoTaskCompleted) {
+        try {
+          console.log('🎯 新手手動上傳成功，觸發任務：photo_upload');
+          await completeOnboardingTask('photo_upload');
+          console.log('✅ 新手任務完成：拍照入庫（手動上傳）');
+        } catch (taskError) {
+          console.error('❌ 新手任務完成失敗:', taskError);
+        }
       }
     } catch (error) {
       console.error('圖片上傳失敗:', error);
@@ -267,12 +316,17 @@ function AddFoodItem() {
       await createFoodItem(foodData);
       message.success('新增食材成功！');
       
-      // 觸發新手任務1：拍照入庫
-      try {
-        await completeOnboardingTask('photo_upload');
-      } catch (error) {
-        // 靜默處理，不影響正常流程
-        console.log('更新新手進度失敗:', error);
+      // 檢查是否為新手，只有新手且還沒完成拍照任務才觸發
+      const isPhotoTaskCompleted = onboardingProgress?.tasks?.photo_upload?.completed || false;
+      
+      if (!isPhotoTaskCompleted) {
+        try {
+          console.log('🎯 新手儲存食材成功，觸發任務：photo_upload');
+          await completeOnboardingTask('photo_upload');
+          console.log('✅ 新手任務完成：拍照入庫（儲存食材）');
+        } catch (error) {
+          console.error('❌ 新手任務完成失敗:', error);
+        }
       }
       
       navigate('/');
