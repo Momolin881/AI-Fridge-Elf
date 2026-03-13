@@ -123,7 +123,7 @@ function Home() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [skipFocusReload]);
   
   // 載入新手引導資料
   const loadOnboardingData = async () => {
