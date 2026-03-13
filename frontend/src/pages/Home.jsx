@@ -192,6 +192,11 @@ function Home() {
           
           if (result?.progress) {
             console.log('🔄 直接更新 photo_upload 進度狀態，新狀態:', result.progress);
+            console.log('📋 photo_upload 任務狀態詳細:', {
+              photo_upload: result.progress.tasks?.photo_upload,
+              mark_consumed: result.progress.tasks?.mark_consumed,
+              recipe_view: result.progress.tasks?.recipe_view
+            });
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
             
@@ -226,6 +231,11 @@ function Home() {
           
           if (result?.progress) {
             console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
+            console.log('📋 recipe_view 任務狀態詳細:', {
+              photo_upload: result.progress.tasks?.photo_upload,
+              mark_consumed: result.progress.tasks?.mark_consumed,
+              recipe_view: result.progress.tasks?.recipe_view
+            });
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
             
@@ -464,6 +474,11 @@ function Home() {
           
           if (result?.progress) {
             console.log('🔄 直接更新 mark_consumed 進度狀態，新狀態:', result.progress);
+            console.log('📋 mark_consumed 任務狀態詳細:', {
+              photo_upload: result.progress.tasks?.photo_upload,
+              mark_consumed: result.progress.tasks?.mark_consumed,
+              recipe_view: result.progress.tasks?.recipe_view
+            });
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
             
