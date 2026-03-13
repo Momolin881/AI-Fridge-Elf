@@ -180,6 +180,7 @@ function AddFoodItem() {
           console.log('✅ 新手任務完成：拍照入庫', taskResult);
           console.log('🔍 taskResult.progress 存在嗎?', !!taskResult.progress);
           console.log('🔍 taskResult.progress 內容:', taskResult.progress);
+          console.log('🔍 photo_upload 任務狀態:', taskResult.progress?.tasks?.photo_upload);
           // 直接使用 API 回應中的最新進度，而不是重新載入
           if (taskResult.progress) {
             setOnboardingProgress(taskResult.progress);
