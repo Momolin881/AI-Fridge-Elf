@@ -186,6 +186,9 @@ function AddFoodItem() {
             setOnboardingProgress(taskResult.progress);
             setPhotoTaskCompleted(true); // 標記已完成，避免重複執行
             console.log('🔄 已更新本地進度狀態:', taskResult.progress);
+            
+            // 保存最新進度用於導航傳遞
+            window.latestOnboardingProgress = taskResult.progress;
           } else {
             console.log('❌ taskResult.progress 不存在，無法更新狀態');
           }
@@ -234,6 +237,9 @@ function AddFoodItem() {
             setOnboardingProgress(taskResult.progress);
             setPhotoTaskCompleted(true); // 標記已完成，避免重複執行
             console.log('🔄 已更新本地進度狀態:', taskResult.progress);
+            
+            // 保存最新進度用於導航傳遞
+            window.latestOnboardingProgress = taskResult.progress;
           }
         } catch (taskError) {
           console.error('❌ 新手任務自動完成失敗:', taskError);
@@ -286,6 +292,9 @@ function AddFoodItem() {
           if (taskResult.progress) {
             setOnboardingProgress(taskResult.progress);
             console.log('🔄 已更新本地進度狀態:', taskResult.progress);
+            
+            // 保存最新進度用於導航傳遞
+            window.latestOnboardingProgress = taskResult.progress;
           }
         } catch (taskError) {
           console.error('❌ 新手任務完成失敗:', taskError);
@@ -351,6 +360,9 @@ function AddFoodItem() {
           if (taskResult.progress) {
             setOnboardingProgress(taskResult.progress);
             console.log('🔄 已更新本地進度狀態:', taskResult.progress);
+            
+            // 保存最新進度用於導航傳遞
+            window.latestOnboardingProgress = taskResult.progress;
           }
         } catch (error) {
           console.error('❌ 新手任務完成失敗:', error);
@@ -360,12 +372,14 @@ function AddFoodItem() {
       // 延遲一點導航，確保後端狀態更新完成
       // 直接傳遞最新的進度資料，不依賴重新查詢
       setTimeout(() => {
-        console.log('📤 準備傳遞的進度資料:', onboardingProgress);
+        // 使用全域保存的最新進度，避免狀態更新延遲問題
+        const progressToPass = window.latestOnboardingProgress || onboardingProgress;
+        console.log('📤 準備傳遞的進度資料:', progressToPass);
         navigate('/', { 
           replace: true, 
           state: { 
             refreshOnboarding: true, 
-            onboardingProgress: onboardingProgress, // 傳遞最新進度
+            onboardingProgress: progressToPass, // 傳遞最新進度
             timestamp: Date.now() 
           } 
         });
