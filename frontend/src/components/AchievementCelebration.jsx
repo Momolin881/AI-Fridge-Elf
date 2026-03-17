@@ -176,7 +176,7 @@ const AchievementCelebration = ({
               className="celebration-button"
               onClick={handleConfirm}
             >
-              恭喜完成新手三部曲！請繼續探索新功能
+              恭喜完成新手三部曲！按右上x 進入冰友模式
             </Button>
           </div>
 
