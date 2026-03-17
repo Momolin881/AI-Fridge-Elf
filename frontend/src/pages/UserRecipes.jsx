@@ -111,37 +111,45 @@ function UserRecipes() {
     return (
       <Card
         key={userRecipe.id}
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: 12, cursor: 'pointer' }}
         title={
-          <div 
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-            onClick={(e) => e.stopPropagation()} // 阻止標題區域的點擊事件冒泡
-          >
-            <span onClick={() => navigate(`/recipes/detail/${userRecipe.id}`, { state: { recipe } })}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span 
+              style={{ cursor: 'pointer' }}
+              onClick={() => navigate(`/recipes/detail/${userRecipe.id}`, { state: { recipe } })}
+            >
               {recipe.name}
             </span>
-            <Space onClick={(e) => e.stopPropagation()}>
+            <Space>
               <Tag color={getDifficultyColor(recipe.difficulty)}>
                 {recipe.difficulty}
               </Tag>
               <Popconfirm
                 title="確定要刪除這個食譜嗎？"
-                onConfirm={() => handleDelete(userRecipe.id, userRecipe.category)}
+                onConfirm={(e) => {
+                  e?.stopPropagation?.();
+                  handleDelete(userRecipe.id, userRecipe.category);
+                }}
                 okText="確定"
                 cancelText="取消"
+                onCancel={(e) => e?.stopPropagation?.()}
               >
                 <Button
                   type="text"
                   danger
                   icon={<DeleteOutlined />}
                   size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('🗑️ 點擊刪除按鈕:', { userRecipeId: userRecipe.id, category: userRecipe.category });
+                  }}
                 />
               </Popconfirm>
             </Space>
           </div>
         }
-        onClick={() => navigate(`/recipes/detail/${userRecipe.id}`, { state: { recipe } })}
         hoverable
+        onClick={() => navigate(`/recipes/detail/${userRecipe.id}`, { state: { recipe } })}
       >
         <Space direction="vertical" style={{ width: '100%' }} size="small">
           {/* 描述 */}
