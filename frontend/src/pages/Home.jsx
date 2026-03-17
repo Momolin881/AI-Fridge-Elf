@@ -416,23 +416,29 @@ function Home() {
           console.log('🔍 mark_consumed completeOnboardingTask 完整回應:', result);
           
           if (result?.progress) {
-            console.log('🔄 直接更新 mark_consumed 進度狀態，新狀態:', result.progress);
-            console.log('📋 mark_consumed 任務狀態詳細:', {
-              photo_upload: {
-                completed: result.progress.tasks?.photo_upload?.completed,
-                completed_at: result.progress.tasks?.photo_upload?.completed_at
-              },
-              mark_consumed: {
-                completed: result.progress.tasks?.mark_consumed?.completed,
-                completed_at: result.progress.tasks?.mark_consumed?.completed_at
-              },
-              recipe_view: {
-                completed: result.progress.tasks?.recipe_view?.completed,
-                completed_at: result.progress.tasks?.recipe_view?.completed_at
+            console.log('🔄 合併 mark_consumed 進度狀態');
+            // 合併進度，保留已完成的任務
+            const mergedProgress = {
+              ...result.progress,
+              tasks: {
+                ...result.progress.tasks,
+                // 保留現有已完成的任務
+                ...(onboardingProgress.tasks.photo_upload?.completed && {
+                  photo_upload: onboardingProgress.tasks.photo_upload
+                }),
+                ...(onboardingProgress.tasks.mark_consumed?.completed && {
+                  mark_consumed: onboardingProgress.tasks.mark_consumed
+                }),
+                ...(onboardingProgress.tasks.recipe_view?.completed && {
+                  recipe_view: onboardingProgress.tasks.recipe_view
+                }),
+                // 更新當前完成的任務
+                mark_consumed: result.progress.tasks?.mark_consumed || { completed: true, completed_at: new Date().toISOString() }
               }
-            });
-            setOnboardingProgress(result.progress);
-            saveProgressToStorage(result.progress);
+            };
+            console.log('📋 合併後的任務狀態:', mergedProgress.tasks);
+            setOnboardingProgress(mergedProgress);
+            saveProgressToStorage(mergedProgress);
             
             console.log('✅ 任務完成，已保存到 localStorage');
             
