@@ -14,7 +14,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 // 建立 Axios 實例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 30000, // 配合 4o-mini 調整為30秒
 });
 
 // 請求攔截器：自動設置 Content-Type（FormData 除外）
@@ -23,9 +23,13 @@ apiClient.interceptors.request.use(
     if (config.data instanceof FormData) {
       // FormData：刪除預設的 Content-Type，讓瀏覽器自動設置（包含 boundary）
       delete config.headers['Content-Type'];
-      // 增加上傳超時時間
-      config.timeout = 60000;
-      console.log('📤 FormData request:', config.url);
+      // AI 辨識需要更長的處理時間
+      if (config.url?.includes('recognize')) {
+        config.timeout = 45000; // 4o-mini 更快，45秒足夠
+      } else {
+        config.timeout = 30000;  // 一般上傳30秒
+      }
+      console.log('📤 FormData request:', config.url, 'timeout:', config.timeout);
     } else {
       config.headers['Content-Type'] = 'application/json';
     }

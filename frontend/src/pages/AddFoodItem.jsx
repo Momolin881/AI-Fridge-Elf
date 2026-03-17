@@ -29,6 +29,7 @@ import { CameraOutlined, FormOutlined, CalendarOutlined, DeleteOutlined } from '
 import dayjs from 'dayjs';
 import { getFridges, getFridge, recognizeFoodImage, createFoodItem, uploadFoodImage, completeOnboardingTask, getOnboardingProgress } from '../services/api';
 import { ImageUploader, CompartmentSelector, ExpenseCalendarModal } from '../components';
+import { smartCompress, isFromCamera } from '../utils/imageCompress';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -49,19 +50,31 @@ function AddFoodItem() {
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [photoTaskCompleted, setPhotoTaskCompleted] = useState(false);
 
-  // 簡化的圖片處理函數（避免壓縮導致的問題）
+  // 智能圖片壓縮處理（提升AI辨識成功率）
   const processImage = async (file) => {
     try {
-      // 如果檔案太大（超過 5MB），提醒使用者
-      if (file.size > 5 * 1024 * 1024) {
-        message.warning('圖片檔案較大，可能影響上傳速度');
+      const originalSize = (file.size / 1024 / 1024).toFixed(2);
+      console.log(`📷 開始處理圖片: ${file.name} (${originalSize}MB)`);
+
+      // 檢測是否為相機拍攝
+      const fromCamera = isFromCamera(file);
+      console.log(`📱 是否為相機拍攝: ${fromCamera}`);
+
+      // 智能壓縮
+      const processedFile = await smartCompress(file, fromCamera);
+      const processedSize = (processedFile.size / 1024 / 1024).toFixed(2);
+      
+      console.log(`✅ 圖片處理完成: ${processedSize}MB`);
+      
+      // 如果壓縮效果顯著，提示用戶
+      if (file.size > processedFile.size * 1.5) {
+        message.success(`圖片已優化: ${originalSize}MB → ${processedSize}MB`);
       }
       
-      // 直接回傳原檔案，不進行壓縮
-      // 讓後端處理圖片大小和格式問題
-      return file;
+      return processedFile;
     } catch (error) {
       console.error('圖片處理錯誤:', error);
+      message.warning('圖片處理失敗，使用原檔案');
       return file;
     }
   };
@@ -149,8 +162,11 @@ function AddFoodItem() {
       setAiRecognizing(true);
       message.loading({ content: 'AI 辨識中...', key: 'ai-recognition' });
 
-      // 呼叫 AI 辨識 API（直接使用原檔案）
-      const result = await recognizeFoodImage(file, validFridgeId, effectiveStorageType);
+      // 先處理圖片（壓縮優化）
+      const processedFile = await processImage(file);
+      
+      // 呼叫 AI 辨識 API（使用優化後的圖片）
+      const result = await recognizeFoodImage(processedFile, validFridgeId, effectiveStorageType);
 
       message.success({ content: `辨識成功: ${result.name}`, key: 'ai-recognition' });
 
@@ -266,8 +282,11 @@ function AddFoodItem() {
       setManualImageUploading(true);
       message.loading({ content: '正在上傳圖片...', key: 'manual-upload' });
 
-      // 上傳圖片（不含 AI 辨識，直接使用原檔案）
-      const result = await uploadFoodImage(file, validFridgeId);
+      // 先處理圖片（壓縮優化）
+      const processedFile = await processImage(file);
+
+      // 上傳圖片（不含 AI 辨識，使用優化後的圖片）
+      const result = await uploadFoodImage(processedFile, validFridgeId);
 
       // 設定表單欄位
       form.setFieldsValue({
