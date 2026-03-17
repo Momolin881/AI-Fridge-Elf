@@ -148,13 +148,26 @@ async def update_fridge(id: int, data: FridgeUpdate, db: DBSession, user_id: Cur
 
 @router.post("/fridges/{id}/compartments", response_model=FridgeCompartmentResponse, status_code=status.HTTP_201_CREATED)
 async def create_compartment(id: int, data: FridgeCompartmentCreate, db: DBSession, user_id: CurrentUserId):
-    """新增分區"""
+    """新增分區（限制：最多5個使用者自建分區）"""
     # 驗證冰箱所有權
     fridge = db.query(Fridge).filter(Fridge.id == id, Fridge.user_id == user_id).first()
 
     if not fridge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="冰箱不存在或無權限存取"
+        )
+
+    # 檢查使用者自建分區數量限制
+    SYSTEM_DEFAULT_NAMES = ['冷藏上層', '冷藏下層', '冷凍']
+    user_created_count = db.query(FridgeCompartment).filter(
+        FridgeCompartment.fridge_id == id,
+        ~FridgeCompartment.name.in_(SYSTEM_DEFAULT_NAMES)
+    ).count()
+    
+    if user_created_count >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="已達到自訂分區上限（5個）。建議整合類似的分區，或刪除不常用的分區後再新增。"
         )
 
     # 建立分區
@@ -210,4 +223,66 @@ async def reorder_compartments(id: int, compartment_orders: list[dict], db: DBSe
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="更新分區排序失敗"
+        )
+
+
+@router.delete("/fridges/{fridge_id}/compartments/{compartment_id}", status_code=status.HTTP_200_OK)
+async def delete_compartment(fridge_id: int, compartment_id: int, db: DBSession, user_id: CurrentUserId):
+    """刪除分區（有限制：只能刪除空的、非預設分區）"""
+    from src.models.food_item import FoodItem
+    
+    # 驗證冰箱所有權
+    fridge = db.query(Fridge).filter(Fridge.id == fridge_id, Fridge.user_id == user_id).first()
+    if not fridge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="冰箱不存在或無權限存取"
+        )
+    
+    # 查找分區
+    compartment = db.query(FridgeCompartment).filter(
+        FridgeCompartment.id == compartment_id,
+        FridgeCompartment.fridge_id == fridge_id
+    ).first()
+    
+    if not compartment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="分區不存在"
+        )
+    
+    # 檢查是否為系統預設分區（不可刪除）
+    SYSTEM_DEFAULT_NAMES = ['冷藏上層', '冷藏下層', '冷凍']
+    if compartment.name in SYSTEM_DEFAULT_NAMES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="系統預設分區無法刪除"
+        )
+    
+    # 檢查分區是否為空（不能有食材）
+    food_items_count = db.query(FoodItem).filter(
+        FoodItem.compartment_id == compartment_id,
+        FoodItem.status == 'active'
+    ).count()
+    
+    if food_items_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"無法刪除分區：內有 {food_items_count} 項食材，請先移動或處理這些食材"
+        )
+    
+    try:
+        # 刪除分區
+        db.delete(compartment)
+        db.commit()
+        
+        logger.info(f"使用者 {user_id} 刪除冰箱 {fridge_id} 的分區: {compartment.name} (ID: {compartment_id})")
+        return {"message": f"成功刪除分區：{compartment.name}"}
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"刪除分區失敗: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="刪除分區失敗"
         )

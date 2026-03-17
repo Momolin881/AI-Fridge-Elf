@@ -284,6 +284,16 @@ export const reorderCompartments = (fridgeId, compartmentOrders) => {
   return apiClient.put(`/fridges/${fridgeId}/compartments/reorder`, compartmentOrders);
 };
 
+/**
+ * 刪除分區
+ * @param {number} fridgeId - 冰箱 ID
+ * @param {number} compartmentId - 分區 ID
+ * @returns {Promise<Object>} 刪除結果
+ */
+export const deleteCompartment = (fridgeId, compartmentId) => {
+  return apiClient.delete(`/fridges/${fridgeId}/compartments/${compartmentId}`);
+};
+
 // ---------- 通知相關 ----------
 
 /**

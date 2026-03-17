@@ -25,8 +25,8 @@ import {
   InputNumber,
   Radio,
 } from 'antd';
-import { PlusOutlined, EditOutlined, MenuOutlined } from '@ant-design/icons';
-import { getFridges, getFridge, updateFridge, createCompartment, getFoodItems, reorderCompartments } from '../services/api';
+import { PlusOutlined, EditOutlined, MenuOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getFridges, getFridge, updateFridge, createCompartment, getFoodItems, reorderCompartments, deleteCompartment } from '../services/api';
 
 const { Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -83,8 +83,42 @@ function FridgeSettings() {
       loadData();
     } catch (error) {
       console.error('新增分區失敗:', error);
-      message.error('新增分區失敗，請稍後再試');
+      if (error.response?.data?.detail) {
+        message.error(error.response.data.detail);
+      } else {
+        message.error('新增分區失敗，請稍後再試');
+      }
     }
+  };
+
+  const handleDeleteCompartment = async (compartmentId, compartmentName) => {
+    try {
+      await deleteCompartment(selectedFridge.id, compartmentId);
+      message.success(`成功刪除分區：${compartmentName}`);
+      loadData();
+    } catch (error) {
+      console.error('刪除分區失敗:', error);
+      if (error.response?.data?.detail) {
+        message.error(error.response.data.detail);
+      } else {
+        message.error('刪除分區失敗，請稍後再試');
+      }
+    }
+  };
+
+  const canDeleteCompartment = (compartment) => {
+    // 系統預設分區不可刪除
+    const systemDefaultNames = ['冷藏上層', '冷藏下層', '冷凍'];
+    if (systemDefaultNames.includes(compartment.name)) {
+      return false;
+    }
+
+    // 檢查是否有食材
+    const foodItemsInCompartment = foodItems.filter(
+      item => item.compartment_id === compartment.id && item.status === 'active'
+    );
+    
+    return foodItemsInCompartment.length === 0;
   };
 
   const handleUpdateFridgeInfo = async (values) => {
@@ -347,8 +381,42 @@ function FridgeSettings() {
                       (item) => item.compartment_id === compartment.id
                     );
 
+                    const canDelete = canDeleteCompartment(compartment);
+                    const systemDefaultNames = ['冷藏上層', '冷藏下層', '冷凍'];
+                    const isSystemDefault = systemDefaultNames.includes(compartment.name);
+
                     return (
-                      <List.Item>
+                      <List.Item
+                        actions={[
+                          canDelete ? (
+                            <Button
+                              type="text"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`確定要刪除分區「${compartment.name}」嗎？此操作無法復原。`)) {
+                                  handleDeleteCompartment(compartment.id, compartment.name);
+                                }
+                              }}
+                              title="刪除分區"
+                            />
+                          ) : (
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              disabled
+                              title={
+                                isSystemDefault 
+                                  ? "系統預設分區無法刪除" 
+                                  : `分區內有 ${itemsInCompartment.length} 項食材，請先移動或處理這些食材`
+                              }
+                            />
+                          )
+                        ]}
+                      >
                         <List.Item.Meta
                           title={
                             <Space>
@@ -356,6 +424,9 @@ function FridgeSettings() {
                               <Tag color={compartment.parent_type === '冷藏' ? 'blue' : 'cyan'}>
                                 {compartment.parent_type}
                               </Tag>
+                              {isSystemDefault && (
+                                <Tag color="green" size="small">系統預設</Tag>
+                              )}
                             </Space>
                           }
                           description={`${itemsInCompartment.length} 項食材`}
