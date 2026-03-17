@@ -275,11 +275,19 @@ function Home() {
       
       // 檢查 localStorage 中的最近更新時間，如果在10秒內則跳過 API 呼叫
       const storedProgress = getProgressFromStorage();
-      if (storedProgress && storedProgress.lastUpdated && (Date.now() - storedProgress.lastUpdated) < 10000) {
-        console.log('🔒 跳過 API 載入，使用最近的 localStorage 資料');
-        setOnboardingProgress(storedProgress);
-        setShowOnboarding(true);
-        return;
+      if (storedProgress && storedProgress.lastUpdated) {
+        const timeDiff = Date.now() - storedProgress.lastUpdated;
+        console.log('⏰ localStorage 時間差異:', timeDiff, 'ms，10秒內？', timeDiff < 10000);
+        if (timeDiff < 10000) {
+          console.log('🔒 跳過 API 載入，使用最近的 localStorage 資料');
+          setOnboardingProgress(storedProgress);
+          setShowOnboarding(true);
+          return;
+        } else {
+          console.log('🔄 localStorage 資料過舊，呼叫 API 更新');
+        }
+      } else {
+        console.log('📱 沒有 localStorage 資料，呼叫 API');
       }
       
       // 檢查是否已手動關閉（24小時內）
@@ -782,14 +790,14 @@ function Home() {
                           
                           // 標記為剛更新，防止被 loadOnboardingData 覆蓋
                           console.log('⚡ 步驟 5: 即將設定 recentlyUpdated = true');
-                          console.log('🔒 設定 recentlyUpdated = true，3秒後重置');
+                          console.log('🔒 設定 recentlyUpdated = true，10秒後重置');
                           setRecentlyUpdated(true);
                           console.log('⚡ 步驟 6: setRecentlyUpdated(true) 完成');
                           
                           setTimeout(() => {
                             console.log('🔓 重置 recentlyUpdated = false');
                             setRecentlyUpdated(false);
-                          }, 3000);
+                          }, 10000);
                           console.log('⚡ 步驟 7: setTimeout 設定完成');
                           
                           // 檢查是否顯示慶典
