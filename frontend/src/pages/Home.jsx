@@ -595,25 +595,24 @@ function Home() {
     }
   };
 
-  // 處理成就慶典確認
-  const handleCelebrationConfirm = async () => {
-    try {
-      console.log('🎯 按下成就慶典確認按鈕');
-      await markCelebrationSent();
-      console.log('✅ 慶典標記成功，隱藏新手卡');
-      setShowOnboarding(false);
-      
-      // 確保localStorage也更新
-      const progress = JSON.parse(localStorage.getItem('onboardingProgress') || '{}');
-      progress.celebration_sent = true;
-      localStorage.setItem('onboardingProgress', JSON.stringify(progress));
-      console.log('💾 已更新localStorage慶典狀態');
-    } catch (error) {
-      console.error('❌ 標記慶典失敗:', error);
-      // 即使API失敗，也要隱藏新手卡，避免用戶卡住
-      console.log('🚀 API失敗但仍隱藏新手卡');
-      setShowOnboarding(false);
-    }
+  // 處理成就慶典確認 - 簡化版本
+  const handleCelebrationConfirm = () => {
+    console.log('🎯 按下成就慶典確認按鈕');
+    
+    // 直接隱藏新手卡，不依賴API
+    setShowOnboarding(false);
+    
+    // 更新localStorage
+    const progress = JSON.parse(localStorage.getItem('onboardingProgress') || '{}');
+    progress.celebration_sent = true;
+    localStorage.setItem('onboardingProgress', JSON.stringify(progress));
+    
+    console.log('✅ 新手卡已隱藏，慶典完成');
+    
+    // 背景呼叫API標記（不等待結果）
+    markCelebrationSent().catch(error => {
+      console.log('API標記失敗（可忽略）:', error);
+    });
   };
 
   return (
