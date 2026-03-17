@@ -75,7 +75,9 @@ function UserRecipes() {
 
   const handleDelete = async (userRecipeId, category) => {
     try {
+      console.log('🗑️ 開始刪除食譜:', { userRecipeId, category });
       await deleteUserRecipeAPI(userRecipeId);
+      console.log('✅ 食譜刪除成功');
       message.success('已刪除食譜');
 
       // 更新本地狀態
@@ -83,8 +85,9 @@ function UserRecipes() {
         ...recipes,
         [category]: recipes[category].filter((r) => r.id !== userRecipeId),
       });
+      console.log('🔄 本地狀態已更新');
     } catch (error) {
-      console.error('刪除食譜失敗:', error);
+      console.error('❌ 刪除食譜失敗:', error);
       message.error('刪除食譜失敗，請稍後再試');
     }
   };
@@ -110,9 +113,14 @@ function UserRecipes() {
         key={userRecipe.id}
         style={{ marginBottom: 12 }}
         title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{recipe.name}</span>
-            <Space>
+          <div 
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            onClick={(e) => e.stopPropagation()} // 阻止標題區域的點擊事件冒泡
+          >
+            <span onClick={() => navigate(`/recipes/detail/${userRecipe.id}`, { state: { recipe } })}>
+              {recipe.name}
+            </span>
+            <Space onClick={(e) => e.stopPropagation()}>
               <Tag color={getDifficultyColor(recipe.difficulty)}>
                 {recipe.difficulty}
               </Tag>
