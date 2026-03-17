@@ -288,12 +288,12 @@ function Home() {
         return;
       }
       
-      // 檢查 localStorage 中的最近更新時間，如果在10秒內則跳過 API 呼叫
+      // 檢查 localStorage 中的最近更新時間，如果在60秒內則跳過 API 呼叫
       const storedProgress = getProgressFromStorage();
       if (storedProgress && storedProgress.lastUpdated) {
         const timeDiff = Date.now() - storedProgress.lastUpdated;
-        console.log('⏰ localStorage 時間差異:', timeDiff, 'ms，10秒內？', timeDiff < 10000);
-        if (timeDiff < 10000) {
+        console.log('⏰ localStorage 時間差異:', timeDiff, 'ms，60秒內？', timeDiff < 60000);
+        if (timeDiff < 60000) {
           console.log('🔒 跳過 API 載入，使用最近的 localStorage 資料');
           setOnboardingProgress(storedProgress);
           setShowOnboarding(true);
