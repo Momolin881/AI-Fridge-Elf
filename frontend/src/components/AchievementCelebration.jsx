@@ -4,7 +4,7 @@
  * 顯示 confetti 動畫和欣梅爾台詞的慶典效果
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Typography, Button, Space } from 'antd';
 import { TrophyOutlined } from '@ant-design/icons';
 import './AchievementCelebration.css';
@@ -17,6 +17,7 @@ const AchievementCelebration = ({
   onConfirm 
 }) => {
   const confettiRef = useRef(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -30,8 +31,18 @@ const AchievementCelebration = ({
       const timer = setTimeout(() => {
         stopConfetti();
       }, 3000);
+
+      // 10秒後顯示引導提示
+      const guideTimer = setTimeout(() => {
+        setShowGuide(true);
+      }, 10000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(guideTimer);
+      };
+    } else {
+      setShowGuide(false);
     }
   }, [visible]);
 
@@ -165,9 +176,17 @@ const AchievementCelebration = ({
               className="celebration-button"
               onClick={handleConfirm}
             >
-              開始達人之旅
+              恭喜完成新手三部曲！請繼續探索新功能
             </Button>
           </div>
+
+          {/* 10秒後顯示的引導提示 */}
+          {showGuide && (
+            <div className="close-guide">
+              <div className="guide-arrow">↗️</div>
+              <Text className="guide-text">點擊右上角 ✖️ 關閉新手卡片</Text>
+            </div>
+          )}
         </div>
       </Modal>
     </>
