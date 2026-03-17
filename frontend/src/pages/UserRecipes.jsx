@@ -18,7 +18,6 @@ import {
   Tag,
   Tabs,
   List,
-  Popconfirm,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -124,27 +123,21 @@ function UserRecipes() {
               <Tag color={getDifficultyColor(recipe.difficulty)}>
                 {recipe.difficulty}
               </Tag>
-              <Popconfirm
-                title="確定要刪除這個食譜嗎？"
-                onConfirm={(e) => {
-                  e?.stopPropagation?.();
-                  handleDelete(userRecipe.id, userRecipe.category);
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log('🗑️ 點擊刪除按鈕:', { userRecipeId: userRecipe.id, category: userRecipe.category });
+                  
+                  // 直接使用 window.confirm 替代 Popconfirm
+                  if (window.confirm('確定要刪除這個食譜嗎？')) {
+                    handleDelete(userRecipe.id, userRecipe.category);
+                  }
                 }}
-                okText="確定"
-                cancelText="取消"
-                onCancel={(e) => e?.stopPropagation?.()}
-              >
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log('🗑️ 點擊刪除按鈕:', { userRecipeId: userRecipe.id, category: userRecipe.category });
-                  }}
-                />
-              </Popconfirm>
+              />
             </Space>
           </div>
         }
