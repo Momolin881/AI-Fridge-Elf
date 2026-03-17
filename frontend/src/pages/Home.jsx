@@ -225,18 +225,7 @@ function Home() {
     try {
       console.log('🔍 loadOnboardingData 被呼叫');
       
-      // 優先使用 localStorage 資料
-      const storedProgress = getProgressFromStorage();
-      if (storedProgress) {
-        console.log('📱 使用 localStorage 資料');
-        setOnboardingProgress(storedProgress);
-        setShowOnboarding(true);
-        return;
-      }
-      
-      console.log('📡 沒有 localStorage 資料，呼叫 API');
-      
-      // 檢查是否已手動關閉（24小時內）
+      // 先檢查是否已手動關閉（24小時內）
       try {
         const dismissedData = localStorage.getItem(ONBOARDING_DISMISSED_KEY);
         if (dismissedData) {
@@ -249,6 +238,17 @@ function Home() {
       } catch (e) {
         console.log('檢查關閉狀態失敗:', e);
       }
+      
+      // 優先使用 localStorage 資料
+      const storedProgress = getProgressFromStorage();
+      if (storedProgress) {
+        console.log('📱 使用 localStorage 資料');
+        setOnboardingProgress(storedProgress);
+        setShowOnboarding(true);
+        return;
+      }
+      
+      console.log('📡 沒有 localStorage 資料，呼叫 API');
       
       const shouldShow = await shouldShowOnboardingTutorial();
       if (shouldShow.should_show) {
