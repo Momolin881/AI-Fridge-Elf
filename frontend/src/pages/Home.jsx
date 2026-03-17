@@ -105,17 +105,16 @@ function Home() {
     loadOnboardingData();
   }, []); // 空依賴陣列，只執行一次
 
-  // 當資料載入完成後，觸發自動檢測（僅在首次載入或新增食材時）
+  // 當資料載入完成後，觸發自動檢測（只執行一次）
   useEffect(() => {
     if (foodItems.length > 0 && onboardingProgress && !onboardingProgress.is_completed && !autoDetectRunning) {
       console.log('📊 觸發自動檢測條件滿足，延遲500ms後執行');
-      // 延遲檢測，避免頻繁觸發
       const timer = setTimeout(() => {
         autoDetectTaskCompletion();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [foodItems.length, onboardingProgress?.is_completed, autoDetectRunning]);
+  }, [foodItems.length]); // 只依賴 foodItems.length
 
   // 監聽導航狀態變化，從 AddFoodItem 返回時使用傳遞的進度資料
   useEffect(() => {
