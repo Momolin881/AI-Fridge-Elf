@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Layout,
   Card,
@@ -36,6 +36,7 @@ const { Title } = Typography;
 
 function AddFoodItem() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fridgeLoading, setFridgeLoading] = useState(true);
@@ -91,20 +92,12 @@ function AddFoodItem() {
     }
   }, [selectedFridge]);
 
-  // 監聽頁面重新聚焦，重新載入分區資料（同步分區變更）
+  // 每次進入頁面都重新載入分區資料
   useEffect(() => {
-    const handleFocus = () => {
-      if (selectedFridge) {
-        console.log('頁面重新聚焦，重新載入冰箱分區資料');
-        loadFridgeDetail(selectedFridge);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [selectedFridge]);
+    if (selectedFridge) {
+      loadFridgeDetail(selectedFridge);
+    }
+  }, [location.pathname]);
 
   const loadFridges = async () => {
     try {
