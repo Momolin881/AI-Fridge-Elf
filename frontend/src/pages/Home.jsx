@@ -58,9 +58,7 @@ function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [celebrationVisible, setCelebrationVisible] = useState(false);
-  const [skipFocusReload, setSkipFocusReload] = useState(false);
   const [autoDetectRunning, setAutoDetectRunning] = useState(false);
-  const [recentlyUpdated, setRecentlyUpdated] = useState(false);
 
   // localStorage 常數
   const ONBOARDING_STORAGE_KEY = 'ai_fridge_elf_onboarding_progress';
@@ -101,19 +99,15 @@ function Home() {
     loadData();
   }, [filter]);
 
-  // 分離新手引導載入邏輯，避免與 filter 變化混合
+  // 只在首次載入時載入新手引導資料
   useEffect(() => {
-    if (!recentlyUpdated) {
-      console.log('🔄 filter 變化，載入新手進度');
-      loadOnboardingData();
-    } else {
-      console.log('🔒 filter 變化但跳過載入新手進度，因為剛剛更新過');
-    }
-  }, [filter, recentlyUpdated]);
+    console.log('🚀 首次載入，檢查新手引導');
+    loadOnboardingData();
+  }, []); // 空依賴陣列，只執行一次
 
   // 當資料載入完成後，觸發自動檢測（僅在首次載入或新增食材時）
   useEffect(() => {
-    if (foodItems.length > 0 && onboardingProgress && !onboardingProgress.is_completed && !autoDetectRunning && !recentlyUpdated) {
+    if (foodItems.length > 0 && onboardingProgress && !onboardingProgress.is_completed && !autoDetectRunning) {
       console.log('📊 觸發自動檢測條件滿足，延遲500ms後執行');
       // 延遲檢測，避免頻繁觸發
       const timer = setTimeout(() => {
@@ -121,7 +115,7 @@ function Home() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [foodItems.length, onboardingProgress?.is_completed, autoDetectRunning, recentlyUpdated]);
+  }, [foodItems.length, onboardingProgress?.is_completed, autoDetectRunning]);
 
   // 監聽導航狀態變化，從 AddFoodItem 返回時使用傳遞的進度資料
   useEffect(() => {
@@ -130,25 +124,11 @@ function Home() {
       console.log('📨 location.state:', location.state);
       console.log('📊 location.state.onboardingProgress:', location.state.onboardingProgress);
       
-      // 如果有傳遞進度資料，直接使用，否則重新載入
+      // 如果有傳遞進度資料，直接使用
       if (location.state.onboardingProgress) {
         console.log('📋 使用傳遞的進度資料:', location.state.onboardingProgress);
         setOnboardingProgress(location.state.onboardingProgress);
         setShowOnboarding(true);
-        
-        // 設定標記，5秒內禁用焦點重新載入
-        setSkipFocusReload(true);
-        setTimeout(() => {
-          setSkipFocusReload(false);
-          console.log('🔓 重新啟用焦點重新載入');
-        }, 5000);
-      } else {
-        console.log('🔄 沒有傳遞進度資料，重新載入');
-        if (!recentlyUpdated) {
-          loadOnboardingData();
-        } else {
-          console.log('🔒 跳過重新載入（剛更新過進度）');
-        }
       }
       
       // 清除狀態避免重複觸發
@@ -156,44 +136,7 @@ function Home() {
     }
   }, [location.state, navigate, location.pathname]);
 
-  // 監聽頁面焦點和可見性變化，重新載入新手進度
-  useEffect(() => {
-    const handleFocus = () => {
-      if (skipFocusReload) {
-        console.log('🔒 跳過焦點重新載入（剛使用傳遞的資料）');
-        return;
-      }
-      if (recentlyUpdated) {
-        console.log('🔒 跳過焦點重新載入（剛更新過進度）');
-        return;
-      }
-      console.log('頁面重新獲得焦點，重新載入新手進度');
-      loadOnboardingData();
-    };
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        if (skipFocusReload) {
-          console.log('🔒 跳過可見性重新載入（剛使用傳遞的資料）');
-          return;
-        }
-        if (recentlyUpdated) {
-          console.log('🔒 跳過可見性重新載入（剛更新過進度）');
-          return;
-        }
-        console.log('頁面變為可見，重新載入新手進度');
-        loadOnboardingData();
-      }
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [skipFocusReload]);
+  // 移除了頁面焦點監聽邏輯，簡化為只載入一次
   
   // 自動檢測任務完成狀態 - 按順序處理，避免狀態覆蓋
   const autoDetectTaskCompletion = async () => {
@@ -246,13 +189,7 @@ function Home() {
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
             
-            // 標記為剛更新，防止被 loadOnboardingData 覆蓋
-            console.log('🔒 設定 recentlyUpdated = true，10秒後重置');
-            setRecentlyUpdated(true);
-            setTimeout(() => {
-              console.log('🔓 重置 recentlyUpdated = false');
-              setRecentlyUpdated(false);
-            }, 10000);
+            console.log('✅ 任務完成，已保存到 localStorage');
             
             // 檢查是否顯示慶典
             if (result.show_celebration) {
@@ -281,29 +218,18 @@ function Home() {
   // 載入新手引導資料
   const loadOnboardingData = async () => {
     try {
-      console.log('🔍 loadOnboardingData 被呼叫，recentlyUpdated =', recentlyUpdated);
-      // 如果剛剛更新過進度，跳過此次載入避免覆蓋
-      if (recentlyUpdated) {
-        console.log('🔒 跳過 loadOnboardingData，剛更新過進度');
+      console.log('🔍 loadOnboardingData 被呼叫');
+      
+      // 優先使用 localStorage 資料
+      const storedProgress = getProgressFromStorage();
+      if (storedProgress) {
+        console.log('📱 使用 localStorage 資料');
+        setOnboardingProgress(storedProgress);
+        setShowOnboarding(true);
         return;
       }
       
-      // 檢查 localStorage 中的最近更新時間，如果在60秒內則跳過 API 呼叫
-      const storedProgress = getProgressFromStorage();
-      if (storedProgress && storedProgress.lastUpdated) {
-        const timeDiff = Date.now() - storedProgress.lastUpdated;
-        console.log('⏰ localStorage 時間差異:', timeDiff, 'ms，60秒內？', timeDiff < 60000);
-        if (timeDiff < 60000) {
-          console.log('🔒 跳過 API 載入，使用最近的 localStorage 資料');
-          setOnboardingProgress(storedProgress);
-          setShowOnboarding(true);
-          return;
-        } else {
-          console.log('🔄 localStorage 資料過舊，呼叫 API 更新');
-        }
-      } else {
-        console.log('📱 沒有 localStorage 資料，呼叫 API');
-      }
+      console.log('📡 沒有 localStorage 資料，呼叫 API');
       
       // 檢查是否已手動關閉（24小時內）
       try {
@@ -339,55 +265,38 @@ function Home() {
             saveProgressToStorage(progressData);
           }
         } catch (progressError) {
-          console.log('載入新手進度失敗，嘗試使用 localStorage 備份:', progressError);
-          
-          // 嘗試從 localStorage 讀取備份
-          const storedProgress = getProgressFromStorage();
-          if (storedProgress) {
-            console.log('📱 使用 localStorage 備份資料');
-            setOnboardingProgress(storedProgress);
-          } else {
-            console.log('💾 沒有有效的備份，使用預設值');
-            // 設定預設進度，確保卡片能顯示
-            const defaultProgress = {
-              is_completed: false,
-              completed_at: null,
-              tasks: {
-                photo_upload: { completed: false, completed_at: null },
-                mark_consumed: { completed: false, completed_at: null },
-                recipe_view: { completed: false, completed_at: null }
-              },
-              achievement_sent: false
-            };
-            setOnboardingProgress(defaultProgress);
-            saveProgressToStorage(defaultProgress);
-          }
+          console.log('載入新手進度失敗，使用預設值:', progressError);
+          // 設定預設進度，確保卡片能顯示
+          const defaultProgress = {
+            is_completed: false,
+            completed_at: null,
+            tasks: {
+              photo_upload: { completed: false, completed_at: null },
+              mark_consumed: { completed: false, completed_at: null },
+              recipe_view: { completed: false, completed_at: null }
+            },
+            achievement_sent: false
+          };
+          setOnboardingProgress(defaultProgress);
+          saveProgressToStorage(defaultProgress);
         }
       }
     } catch (error) {
       console.log('檢查新手教學狀態失敗:', error);
-      // 封測期間：如果 API 失敗，仍然顯示新手教學
+      // 封測期間：如果 API 失敗，仍然顯示新手教學（如果沒有 localStorage 資料的話）
       setShowOnboarding(true);
-      
-      // 嘗試使用 localStorage 備份
-      const storedProgress = getProgressFromStorage();
-      if (storedProgress) {
-        console.log('📱 API失敗，使用 localStorage 備份資料');
-        setOnboardingProgress(storedProgress);
-      } else {
-        const defaultProgress = {
-          is_completed: false,
-          completed_at: null,
-          tasks: {
-            photo_upload: { completed: false, completed_at: null },
-            mark_consumed: { completed: false, completed_at: null },
-            recipe_view: { completed: false, completed_at: null }
-          },
-          achievement_sent: false
-        };
-        setOnboardingProgress(defaultProgress);
-        saveProgressToStorage(defaultProgress);
-      }
+      const defaultProgress = {
+        is_completed: false,
+        completed_at: null,
+        tasks: {
+          photo_upload: { completed: false, completed_at: null },
+          mark_consumed: { completed: false, completed_at: null },
+          recipe_view: { completed: false, completed_at: null }
+        },
+        achievement_sent: false
+      };
+      setOnboardingProgress(defaultProgress);
+      saveProgressToStorage(defaultProgress);
     }
   };
 
@@ -520,13 +429,7 @@ function Home() {
             setOnboardingProgress(result.progress);
             saveProgressToStorage(result.progress);
             
-            // 標記為剛更新，防止被 loadOnboardingData 覆蓋
-            console.log('🔒 設定 recentlyUpdated = true，10秒後重置');
-            setRecentlyUpdated(true);
-            setTimeout(() => {
-              console.log('🔓 重置 recentlyUpdated = false');
-              setRecentlyUpdated(false);
-            }, 10000);
+            console.log('✅ 任務完成，已保存到 localStorage');
             
             // 檢查是否顯示慶典
             if (result.show_celebration) {
@@ -780,6 +683,7 @@ function Home() {
                         
                         if (result?.progress) {
                           console.log('🔄 直接更新 recipe_view 進度狀態，新狀態:', result.progress);
+                          console.log('📋 recipe_view API 回應的完整 progress:', result.progress);
                           console.log('📋 recipe_view 按鈕任務狀態詳細:', {
                             photo_upload: {
                               completed: result.progress.tasks?.photo_upload?.completed,
@@ -803,17 +707,7 @@ function Home() {
                           saveProgressToStorage(result.progress);
                           console.log('⚡ 步驟 4: saveProgressToStorage 完成');
                           
-                          // 標記為剛更新，防止被 loadOnboardingData 覆蓋
-                          console.log('⚡ 步驟 5: 即將設定 recentlyUpdated = true');
-                          console.log('🔒 設定 recentlyUpdated = true，10秒後重置');
-                          setRecentlyUpdated(true);
-                          console.log('⚡ 步驟 6: setRecentlyUpdated(true) 完成');
-                          
-                          setTimeout(() => {
-                            console.log('🔓 重置 recentlyUpdated = false');
-                            setRecentlyUpdated(false);
-                          }, 10000);
-                          console.log('⚡ 步驟 7: setTimeout 設定完成');
+                          console.log('⚡ 步驟 5: 任務完成，已保存到 localStorage');
                           
                           // 檢查是否顯示慶典
                           console.log('⚡ 步驟 8: 檢查慶典顯示，show_celebration:', result.show_celebration);
