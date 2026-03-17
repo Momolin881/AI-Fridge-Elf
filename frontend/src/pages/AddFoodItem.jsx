@@ -91,6 +91,21 @@ function AddFoodItem() {
     }
   }, [selectedFridge]);
 
+  // 監聽頁面重新聚焦，重新載入分區資料（同步分區變更）
+  useEffect(() => {
+    const handleFocus = () => {
+      if (selectedFridge) {
+        console.log('頁面重新聚焦，重新載入冰箱分區資料');
+        loadFridgeDetail(selectedFridge);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedFridge]);
+
   const loadFridges = async () => {
     try {
       setFridgeLoading(true);
