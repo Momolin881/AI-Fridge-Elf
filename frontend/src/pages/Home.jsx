@@ -201,10 +201,25 @@ function Home() {
       return;
     }
     
+    // 檢查哪些任務已完成，避免重複檢測
+    const completedTasks = {
+      photo_upload: onboardingProgress.tasks.photo_upload?.completed || false,
+      mark_consumed: onboardingProgress.tasks.mark_consumed?.completed || false,
+      recipe_view: onboardingProgress.tasks.recipe_view?.completed || false
+    };
+    
+    console.log('🔍 自動檢測開始，目前任務狀態:', completedTasks);
+    
+    // 如果所有任務都完成了，跳過檢測
+    if (completedTasks.photo_upload && completedTasks.mark_consumed && completedTasks.recipe_view) {
+      console.log('✅ 所有任務已完成，跳過自動檢測');
+      return;
+    }
+    
     setAutoDetectRunning(true);
     
     try {
-      // 任務1：拍照入庫 - 優先檢測
+      // 任務1：拍照入庫 - 優先檢測（只有在任務未完成時才檢測）
       if (!onboardingProgress.tasks.photo_upload?.completed) {
         const hasImageItem = foodItems.some(item => item.image_url && item.image_url.trim() !== '');
         if (hasImageItem) {
