@@ -138,15 +138,35 @@ def check_expiring_items():
                 today_taiwan = datetime.now(TAIWAN_TZ).date()
                 warning_date = today_taiwan + timedelta(days=settings.expiry_warning_days)
 
-                # 查詢該使用者自有冰箱的即將過期食材（簡化查詢邏輯）
-                expiring_items = db.query(FoodItem).join(
-                    Fridge, FoodItem.fridge_id == Fridge.id
-                ).filter(
-                    Fridge.user_id == settings.user_id,
+                # 查詢該使用者自有冰箱和共享冰箱的即將過期食材
+                # 1. 自有冰箱
+                owned_fridges = db.query(Fridge).filter(
+                    Fridge.user_id == settings.user_id
+                ).all()
+                
+                # 2. 共享冰箱（作為成員）
+                member_fridge_ids = db.query(FridgeMember.fridge_id).filter(
+                    FridgeMember.user_id == settings.user_id
+                ).all()
+                member_fridge_id_list = [fid for (fid,) in member_fridge_ids]
+                
+                shared_fridges = db.query(Fridge).filter(
+                    Fridge.id.in_(member_fridge_id_list)
+                ).all() if member_fridge_id_list else []
+                
+                # 3. 合併所有冰箱
+                all_fridges = {f.id: f for f in owned_fridges}
+                for f in shared_fridges:
+                    all_fridges[f.id] = f
+                
+                # 4. 查詢所有相關冰箱的即將過期食材
+                all_fridge_ids = list(all_fridges.keys())
+                expiring_items = db.query(FoodItem).filter(
+                    FoodItem.fridge_id.in_(all_fridge_ids),
                     FoodItem.expiry_date.isnot(None),
                     FoodItem.expiry_date <= warning_date,
                     FoodItem.status == 'active'
-                ).all()
+                ).all() if all_fridge_ids else []
 
                 if expiring_items:
                     # 檢查 user 是否存在
@@ -158,14 +178,18 @@ def check_expiring_items():
                         logger.error(f"使用者 {settings.user_id} 沒有 LINE User ID，跳過通知")
                         continue
 
-                    # 準備通知資料
+                    # 準備通知資料，包含冰箱資訊
                     items_data = []
                     for item in expiring_items:
                         days_remaining = (item.expiry_date - today_taiwan).days
+                        fridge = all_fridges.get(item.fridge_id)
+                        fridge_name = fridge.model_name if fridge and fridge.model_name else f"冰箱 {item.fridge_id}"
+                        
                         items_data.append({
                             "name": item.name,
                             "expiry_date": item.expiry_date.isoformat(),
-                            "days_remaining": days_remaining
+                            "days_remaining": days_remaining,
+                            "fridge_name": fridge_name
                         })
 
                     # 發送通知
