@@ -200,6 +200,12 @@ function Home() {
             if (result.show_celebration) {
               setCelebrationVisible(true);
             }
+            
+            // 檢查是否完成所有任務，如果是則自動隱藏新手卡片
+            if (result.is_all_completed) {
+              console.log('🎯 所有任務已完成，自動隱藏新手卡片');
+              setShowOnboarding(false);
+            }
           }
           console.log('✅ photo_upload 任務處理完成，等待下次檢測其他任務');
           return; // 完成一個任務後立即返回，避免同時處理多個任務
@@ -446,6 +452,12 @@ function Home() {
             if (result.show_celebration) {
               setCelebrationVisible(true);
             }
+            
+            // 檢查是否完成所有任務，如果是則自動隱藏新手卡片
+            if (result.is_all_completed) {
+              console.log('🎯 所有任務已完成，自動隱藏新手卡片');
+              setShowOnboarding(false);
+            }
           } else {
             console.log('❌ mark_consumed API 回應中沒有 progress 資料，強制重新載入');
             setTimeout(() => {
@@ -599,13 +611,15 @@ function Home() {
   const handleCelebrationConfirm = () => {
     console.log('🎯 按下成就慶典確認按鈕');
     
-    // 直接隱藏新手卡，不依賴API
+    // 隱藏慶典和新手卡
+    setCelebrationVisible(false);
     setShowOnboarding(false);
     
-    // 更新localStorage
-    const progress = JSON.parse(localStorage.getItem('onboardingProgress') || '{}');
-    progress.celebration_sent = true;
-    localStorage.setItem('onboardingProgress', JSON.stringify(progress));
+    // 統一使用 ONBOARDING_DISMISSED_KEY 標記為已關閉
+    localStorage.setItem(ONBOARDING_DISMISSED_KEY, JSON.stringify({
+      dismissed: true,
+      dismissedAt: Date.now()
+    }));
     
     console.log('✅ 新手卡已隱藏，慶典完成');
     
@@ -734,6 +748,12 @@ function Home() {
                           if (result.show_celebration) {
                             console.log('⚡ 步驟 9: 顯示慶典');
                             setCelebrationVisible(true);
+                          }
+                          
+                          // 檢查是否完成所有任務，如果是則自動隱藏新手卡片
+                          if (result.is_all_completed) {
+                            console.log('🎯 所有任務已完成，自動隱藏新手卡片');
+                            setShowOnboarding(false);
                           }
                           
                           console.log('⚡ 所有步驟完成');

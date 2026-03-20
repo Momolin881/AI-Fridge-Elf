@@ -116,8 +116,15 @@ const AchievementCelebration = ({
   };
 
   const handleConfirm = () => {
+    console.log('🎯 慶典按鈕被點擊');
     stopConfetti();
-    onConfirm && onConfirm();
+    
+    // 執行父元件的回調函數來關閉新手卡
+    if (onConfirm) {
+      onConfirm();
+    }
+    
+    // 關閉慶典彈窗
     onClose();
   };
 
@@ -176,7 +183,7 @@ const AchievementCelebration = ({
               className="celebration-button"
               onClick={handleConfirm}
             >
-              恭喜完成新手三部曲！請繼續探索新功能
+              🏆 恭喜完成！請繼續探索新功能
             </Button>
           </div>
 
