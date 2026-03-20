@@ -61,7 +61,8 @@ const Confetti = () => {
 const OnboardingCard = ({ 
   onClose, 
   progress = null,
-  isVisible = true 
+  isVisible = true,
+  onCelebrationTrigger = null
 }) => {
   const [currentProgress, setCurrentProgress] = useState({
     tasks: {
@@ -75,8 +76,21 @@ const OnboardingCard = ({
   useEffect(() => {
     if (progress) {
       setCurrentProgress(progress);
+      
+      // 檢查是否所有任務都完成了
+      const allCompleted = Object.values(progress.tasks || {}).every(task => task.completed);
+      const totalTasks = Object.keys(progress.tasks || {}).length;
+      
+      console.log('🔍 OnboardingCard 檢查完成狀態:', { allCompleted, totalTasks, achievement_sent: progress.achievement_sent });
+      
+      if (allCompleted && totalTasks === 3 && !progress.achievement_sent && onCelebrationTrigger) {
+        console.log('🎊 OnboardingCard 觸發慶典！');
+        setTimeout(() => {
+          onCelebrationTrigger();
+        }, 500);
+      }
     }
-  }, [progress]);
+  }, [progress, onCelebrationTrigger]);
 
   // 計算完成進度
   const completedCount = Object.values(currentProgress.tasks || {}).filter(

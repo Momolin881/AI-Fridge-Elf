@@ -653,6 +653,7 @@ function Home() {
             progress={onboardingProgress}
             onClose={handleOnboardingClose}
             isVisible={showOnboarding}
+            onCelebrationTrigger={() => setCelebrationVisible(true)}
           />
         )}
 
