@@ -148,7 +148,11 @@ const AchievementCelebration = ({
         closable={false}
         centered
         className="celebration-modal"
-        styles={{ mask: { backgroundColor: 'rgba(255, 255, 255, 0.8)' } }}
+        zIndex={10000}
+        styles={{ 
+          mask: { backgroundColor: 'rgba(255, 255, 255, 0.8)', zIndex: 10000 },
+          body: { zIndex: 10001 }
+        }}
       >
         <div className="celebration-content">
           {/* 獎盃圖示 */}
@@ -182,14 +186,27 @@ const AchievementCelebration = ({
           
           {/* 確認按鈕 */}
           <div className="celebration-actions">
-            <Button 
-              type="primary"
-              size="large"
-              className="celebration-button"
+            <div 
               onClick={handleConfirm}
+              onTouchEnd={handleConfirm}
+              style={{
+                backgroundColor: '#52c41a',
+                color: 'white',
+                padding: '12px 32px',
+                borderRadius: '24px',
+                fontSize: '16px',
+                fontWeight: '600',
+                textAlign: 'center',
+                cursor: 'pointer',
+                userSelect: 'none',
+                position: 'relative',
+                zIndex: 10001,
+                border: 'none',
+                outline: 'none'
+              }}
             >
               🏆 恭喜完成！請繼續探索新功能
-            </Button>
+            </div>
           </div>
 
           {/* 10秒後顯示的引導提示 */}
