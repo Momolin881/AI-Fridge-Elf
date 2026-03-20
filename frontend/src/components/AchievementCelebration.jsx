@@ -186,17 +186,12 @@ const AchievementCelebration = ({
           
           {/* 確認按鈕 */}
           <div className="celebration-actions">
-            <div 
+            <button 
+              type="button"
               onClick={() => {
-                console.log('🔥 RAW CLICK EVENT FIRED!');
-                handleConfirm();
-              }}
-              onTouchStart={() => {
-                console.log('🔥 RAW TOUCH EVENT FIRED!');
-                handleConfirm();
-              }}
-              onMouseDown={() => {
-                console.log('🔥 RAW MOUSEDOWN EVENT FIRED!');
+                alert('按鈕被點擊了！');
+                if (onConfirm) onConfirm();
+                if (onClose) onClose();
               }}
               style={{
                 backgroundColor: '#52c41a',
@@ -208,14 +203,13 @@ const AchievementCelebration = ({
                 textAlign: 'center',
                 cursor: 'pointer',
                 userSelect: 'none',
-                position: 'relative',
-                zIndex: 10001,
-                border: '2px solid red',
-                outline: 'none'
+                border: 'none',
+                outline: 'none',
+                width: '100%'
               }}
             >
               🏆 恭喜完成！請繼續探索新功能
-            </div>
+            </button>
           </div>
 
           {/* 10秒後顯示的引導提示 */}
