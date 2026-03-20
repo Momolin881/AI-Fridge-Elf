@@ -62,7 +62,8 @@ function Home() {
 
   // localStorage 常數
   const ONBOARDING_STORAGE_KEY = 'ai_fridge_elf_onboarding_progress';
-  const ONBOARDING_DISMISSED_KEY = 'ai_fridge_elf_onboarding_dismissed';
+  const ONBOARDING_DISMISSED_KEY = 'ai_fridge_elf_onboarding_dismissed'; // 手動關閉（24小時）
+  const ONBOARDING_COMPLETED_KEY = 'ai_fridge_elf_onboarding_completed'; // 完成任務（永久）
 
   // 保存進度到 localStorage
   const saveProgressToStorage = (progress) => {
@@ -231,13 +232,27 @@ function Home() {
     try {
       console.log('🔍 loadOnboardingData 被呼叫');
       
-      // 先檢查是否已手動關閉（24小時內）
+      // 檢查是否已完成所有任務（永久不顯示）
+      try {
+        const completedData = localStorage.getItem(ONBOARDING_COMPLETED_KEY);
+        if (completedData) {
+          const { completed } = JSON.parse(completedData);
+          if (completed) {
+            console.log('📱 新手三部曲已完成，永久不顯示');
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('檢查完成狀態失敗:', e);
+      }
+      
+      // 檢查是否已手動關閉（24小時內不顯示）
       try {
         const dismissedData = localStorage.getItem(ONBOARDING_DISMISSED_KEY);
         if (dismissedData) {
           const { dismissed, dismissedAt } = JSON.parse(dismissedData);
           if (dismissed && (Date.now() - dismissedAt) < 24 * 60 * 60 * 1000) {
-            console.log('📱 新手卡片在24小時內已被關閉，跳過顯示');
+            console.log('📱 新手卡片在24小時內已被手動關閉，跳過顯示');
             return;
           }
         }
@@ -592,22 +607,22 @@ function Home() {
     return sortedGroups;
   };
 
-  // 處理新手引導卡片關閉
+  // 處理新手引導卡片關閉（手動按 X）
   const handleOnboardingClose = () => {
     setShowOnboarding(false);
-    // 保存關閉狀態到 localStorage（24小時內不再顯示）
+    // 保存手動關閉狀態到 localStorage（24小時內不再顯示）
     try {
       localStorage.setItem(ONBOARDING_DISMISSED_KEY, JSON.stringify({
         dismissed: true,
         dismissedAt: Date.now()
       }));
-      console.log('💾 新手卡片關閉狀態已保存');
+      console.log('💾 新手卡片手動關閉狀態已保存（24小時）');
     } catch (error) {
       console.log('保存關閉狀態失敗:', error);
     }
   };
 
-  // 處理成就慶典確認 - 簡化版本
+  // 處理成就慶典確認（完成所有任務）
   const handleCelebrationConfirm = () => {
     console.log('🎯 按下成就慶典確認按鈕');
     
@@ -615,13 +630,13 @@ function Home() {
     setCelebrationVisible(false);
     setShowOnboarding(false);
     
-    // 統一使用 ONBOARDING_DISMISSED_KEY 標記為已關閉
-    localStorage.setItem(ONBOARDING_DISMISSED_KEY, JSON.stringify({
-      dismissed: true,
-      dismissedAt: Date.now()
+    // 標記為永久完成（以後都不顯示）
+    localStorage.setItem(ONBOARDING_COMPLETED_KEY, JSON.stringify({
+      completed: true,
+      completedAt: Date.now()
     }));
     
-    console.log('✅ 新手卡已隱藏，慶典完成');
+    console.log('✅ 新手三部曲完成，永久不再顯示');
     
     // 背景呼叫API標記（不等待結果）
     markCelebrationSent().catch(error => {
