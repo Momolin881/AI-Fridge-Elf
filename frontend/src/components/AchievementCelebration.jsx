@@ -117,14 +117,19 @@ const AchievementCelebration = ({
 
   const handleConfirm = () => {
     console.log('🎯 慶典按鈕被點擊');
+    console.log('🔍 onConfirm 函數存在嗎?', typeof onConfirm);
     stopConfetti();
     
     // 執行父元件的回調函數來關閉新手卡
     if (onConfirm) {
+      console.log('🚀 執行 onConfirm 回調');
       onConfirm();
+    } else {
+      console.log('❌ onConfirm 不存在');
     }
     
     // 關閉慶典彈窗
+    console.log('🚀 執行 onClose');
     onClose();
   };
 
