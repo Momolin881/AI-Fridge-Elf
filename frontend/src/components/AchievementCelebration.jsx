@@ -141,6 +141,31 @@ const AchievementCelebration = ({
         className={`confetti-container ${visible ? 'active' : ''}`}
       />
       
+      {/* 測試點擊區域 */}
+      {visible && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'red',
+            color: 'white',
+            padding: '20px',
+            zIndex: 99999,
+            fontSize: '20px',
+            cursor: 'pointer'
+          }}
+          onClick={() => {
+            alert('測試按鈕點擊成功！');
+            if (onConfirm) onConfirm();
+            if (onClose) onClose();
+          }}
+        >
+          點我測試！
+        </div>
+      )}
+      
       {/* 慶典彈窗 */}
       <Modal
         open={visible}
