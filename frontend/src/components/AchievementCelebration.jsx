@@ -187,8 +187,17 @@ const AchievementCelebration = ({
           {/* 確認按鈕 */}
           <div className="celebration-actions">
             <div 
-              onClick={handleConfirm}
-              onTouchEnd={handleConfirm}
+              onClick={() => {
+                console.log('🔥 RAW CLICK EVENT FIRED!');
+                handleConfirm();
+              }}
+              onTouchStart={() => {
+                console.log('🔥 RAW TOUCH EVENT FIRED!');
+                handleConfirm();
+              }}
+              onMouseDown={() => {
+                console.log('🔥 RAW MOUSEDOWN EVENT FIRED!');
+              }}
               style={{
                 backgroundColor: '#52c41a',
                 color: 'white',
@@ -201,7 +210,7 @@ const AchievementCelebration = ({
                 userSelect: 'none',
                 position: 'relative',
                 zIndex: 10001,
-                border: 'none',
+                border: '2px solid red',
                 outline: 'none'
               }}
             >
